@@ -6,14 +6,21 @@
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
 
+#include <time.h>
+
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
-
 #define DHTPIN_1 5
 #define DHTPIN_2 4
 #define DHTTYPE DHT22
 DHT dht22_sensor_1(DHTPIN_1, DHTTYPE);    //Creates DHT22 sensor "sensor" object
-DHT dht22_sensor_2(DHTPIN_2, DHTTYPE);    //Creates DHT22 sensor "sensor" object
+//DHT dht22_sensor_2(DHTPIN_2, DHTTYPE);    //Creates DHT22 sensor "sensor" object
+
+#define PWR_SENSOR_1  14
+#define PWR_SENSOR_2  12
+#define PWR_SENSOR_3  13
+#define PWR_SENSOR_4  15
+
 
 
 // Last temperature & humidity, updated in loop()
@@ -24,7 +31,17 @@ ESP8266WiFiMulti WiFiMulti;
 
 void setup() {
   dht22_sensor_1.begin();           //Initializes object.
-  dht22_sensor_2.begin();           //Initializes object.
+  // dht22_sensor_2.begin();           //Initializes object.
+
+  pinMode(PWR_SENSOR_1, OUTPUT);  //GPIO12 as output
+  pinMode(PWR_SENSOR_2, OUTPUT);  //GPIO13 as output
+  pinMode(PWR_SENSOR_3, OUTPUT);  //GPIO14 as output
+  pinMode(PWR_SENSOR_4, OUTPUT);  //GPIO15 as output
+
+  digitalWrite(PWR_SENSOR_1, LOW);  //Initializes all them low (sensors turned off.)
+  digitalWrite(PWR_SENSOR_2, LOW);  
+  digitalWrite(PWR_SENSOR_3, LOW);  
+  digitalWrite(PWR_SENSOR_4, LOW);  
 
 
   Serial.begin(115200);
@@ -75,16 +92,35 @@ void loop() {
     }
   }
 
-  
+  digitalWrite(PWR_SENSOR_1, HIGH);
+  delay(800);
   temperature = dht22_sensor_1.readTemperature();
   humidity = dht22_sensor_1.readHumidity();
   Serial.printf("\nTemperature_1: %f\n", temperature );
   Serial.printf("Humidity_1: %f\n", humidity );
+  //digitalWrite(PWR_SENSOR_1, LOW);
+  /* digitalWrite(PWR_SENSOR_2, HIGH);
+  temperature = dht22_sensor_1.readTemperature();
+  humidity = dht22_sensor_1.readHumidity();
+  Serial.printf("\nTemperature_1: %f\n", temperature );
+  Serial.printf("Humidity_1: %f\n", humidity );
+  digitalWrite(PWR_SENSOR_2, LOW); */
 
-  temperature = dht22_sensor_2.readTemperature();
+
+  
+  /* temperature = dht22_sensor_1.readTemperature();
+  humidity = dht22_sensor_1.readHumidity();
+  Serial.printf("\nTemperature_1: %f\n", temperature );
+  Serial.printf("Humidity_1: %f\n", humidity ); */
+
+  /* temperature = dht22_sensor_2.readTemperature();
   humidity = dht22_sensor_2.readHumidity();
-  Serial.printf("\nTemperature_2: %f \n", temperature );
-  Serial.printf("Humidity_2: %f\n", humidity );
+  Serial.printf("Temperature_2: %f \n", temperature );
+  Serial.printf("Humidity_2: %f\n", humidity ); */
+
+  Serial.printf("millis(): %d\n", millis());
+  Serial.printf("micros(): %d\n", micros());
+
 
   Serial.printf("Going deep sleep...  rtc_time=%d", system_get_rtc_time() );
   ESP.deepSleep(5e6);  //deep sleeps for 5 seconds...
@@ -93,3 +129,4 @@ void loop() {
 
   //delay(10000);
 }
+
