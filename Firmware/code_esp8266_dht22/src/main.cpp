@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <time.h>
 
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
@@ -6,23 +7,30 @@
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
 
-#include <time.h>
-
 #include <Adafruit_Sensor.h>
+
 #include <DHT.h>
-#define DHTPIN_1 5
-#define DHTPIN_2 4
+#define DHT_SENSOR_1 5
+#define DHT_SENSOR_2 4
+#define DHT_SENSOR_3 0
+#define DHT_SENSOR_4 13
+
+
+//pinMode(_pin, INPUT_PULLUP)
 #define DHTTYPE DHT22
-DHT dht22_sensor_1(DHTPIN_1, DHTTYPE);    //Creates DHT22 sensor "sensor" object
+DHT dht22_sensor_1(DHT_SENSOR_1, DHTTYPE);    //Creates DHT22 sensor "sensor" object
 //DHT dht22_sensor_2(DHTPIN_2, DHTTYPE);    //Creates DHT22 sensor "sensor" object
 
-#define PWR_SENSOR_1  14
-#define PWR_SENSOR_2  12
-#define PWR_SENSOR_3  13
-#define PWR_SENSOR_4  15
+#define PWR_SENSORS  14
+#define ON  1
+#define OFF 0
 
+//---------------------------------------------------------------------------------------------------------------------
+//Initialization functions.
+void portInit(void);
+void SetSensorPower(unsigned char state);
 
-
+//---------------------------------------------------------------------------------------------------------------------
 // Last temperature & humidity, updated in loop()
 float temperature = 0.0;
 float humidity = 0.0;
@@ -33,16 +41,8 @@ void setup() {
   dht22_sensor_1.begin();           //Initializes object.
   // dht22_sensor_2.begin();           //Initializes object.
 
-  pinMode(PWR_SENSOR_1, OUTPUT);  //GPIO12 as output
-  pinMode(PWR_SENSOR_2, OUTPUT);  //GPIO13 as output
-  pinMode(PWR_SENSOR_3, OUTPUT);  //GPIO14 as output
-  pinMode(PWR_SENSOR_4, OUTPUT);  //GPIO15 as output
-
-  digitalWrite(PWR_SENSOR_1, LOW);  //Initializes all them low (sensors turned off.)
-  digitalWrite(PWR_SENSOR_2, LOW);  
-  digitalWrite(PWR_SENSOR_3, LOW);  
-  digitalWrite(PWR_SENSOR_4, LOW);  
-
+  portInit();
+  
 
   Serial.begin(115200);
   // Serial.setDebugOutput(true);
@@ -92,13 +92,35 @@ void loop() {
     }
   }
 
-  digitalWrite(PWR_SENSOR_1, HIGH);
+  digitalWrite(PWR_SENSORS, HIGH);
+  dht22_sensor_1.begin();
   delay(800);
-  temperature = dht22_sensor_1.readTemperature();
-  humidity = dht22_sensor_1.readHumidity();
+  dht22_sensor_1.setPin(DHT_SENSOR_1);
+  temperature = dht22_sensor_1.readTemperature(false, true);   //Won't force conversion as the first measurement.
+  humidity = dht22_sensor_1.readHumidity(false);
   Serial.printf("\nTemperature_1: %f\n", temperature );
   Serial.printf("Humidity_1: %f\n", humidity );
-  //digitalWrite(PWR_SENSOR_1, LOW);
+
+  dht22_sensor_1.setPin(DHT_SENSOR_2);
+  temperature = dht22_sensor_1.readTemperature(false, true);   //Forces conversion as it's a different sensor than the last one.
+  humidity = dht22_sensor_1.readHumidity(false);
+  Serial.printf("Temperature_2: %f\n", temperature );
+  Serial.printf("Humidity_2: %f\n", humidity );
+
+  dht22_sensor_1.setPin(DHT_SENSOR_3);
+  temperature = dht22_sensor_1.readTemperature(false, true);   //Forces conversion as it's a different sensor than the last one.
+  humidity = dht22_sensor_1.readHumidity(false);
+  Serial.printf("Temperature_3: %f\n", temperature );
+  Serial.printf("Humidity_3: %f\n", humidity );
+
+  dht22_sensor_1.setPin(DHT_SENSOR_4);
+  temperature = dht22_sensor_1.readTemperature(false, true);   //Forces conversion as it's a different sensor than the last one.
+  humidity = dht22_sensor_1.readHumidity(false);
+  Serial.printf("Temperature_4: %f\n", temperature );
+  Serial.printf("Humidity_4: %f\n", humidity );
+
+  digitalWrite(PWR_SENSORS, LOW);
+  
   /* digitalWrite(PWR_SENSOR_2, HIGH);
   temperature = dht22_sensor_1.readTemperature();
   humidity = dht22_sensor_1.readHumidity();
@@ -130,3 +152,18 @@ void loop() {
   //delay(10000);
 }
 
+void SetSensorPower(unsigned char state){
+  if (state == ON)
+  {
+    digitalWrite(PWR_SENSORS, HIGH);  //Turn sensors supply on.
+  }
+  if (state == OFF)
+  {
+    digitalWrite(PWR_SENSORS, LOW);  //Turn sensors supply off.
+  }
+}
+
+void portInit(void){
+  pinMode(PWR_SENSORS, OUTPUT);   //GPIO12 as output
+  SetSensorPower(OFF);          //Sensors start turned off.
+}
