@@ -39,7 +39,7 @@ float humidity = 0.0;
 ESP8266WiFiMulti WiFiMulti;
 
 void setup() {
-  dht22_sensor_1.begin();           //Initializes object.
+  dht22_sensor_1.begin();           //Initializes objects.
   dht22_sensor_2.begin();
   dht22_sensor_3.begin();
   dht22_sensor_4.begin();
@@ -96,7 +96,6 @@ void loop() {
 
   Serial.printf("Turning on sensor...");
   SetSensorPower(ON);
-  // dht22_sensor_1.begin();           //Initializes object.
   delay(800);
 
   Serial.printf("\nTemperature_1: %f\n", dht22_sensor_1.readTemperature() );
@@ -110,16 +109,15 @@ void loop() {
 
   Serial.printf("\nTemperature_4: %f\n", dht22_sensor_4.readTemperature() );
   Serial.printf("Humidity_4: %f\n", dht22_sensor_4.readHumidity() );
-  
-  // SetSensorPower(OFF);
+  SetSensorPower(OFF);
 
   Serial.printf("Going deep sleep...  rtc_time=%d", system_get_rtc_time() );
   ESP.deepSleep(5e6);  //deep sleeps for 5 seconds...
   Serial.printf("Woke up.  rtc_time=%d", system_get_rtc_time() );
-
-
-  //delay(10000);
+  
 }
+
+
 
 void SetSensorPower(unsigned char state){
   if (state == ON)
