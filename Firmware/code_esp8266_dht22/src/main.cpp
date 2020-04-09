@@ -2,22 +2,23 @@
 //#include <string.h>
 #include <time.h>
 
-#include <user_interface.h>   //Functions to handle RTC memory.
-
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
 
 #include <Hash.h>
-#include <ESPAsyncWebServer.h>
-#include <ESPAsyncTCP.h>
-#include <WebHTMLfiles.h>
+//#include <ESPAsyncWebServer.h>
+#include <ESP8266WebServer.h>
+//#include <ESPAsyncTCP.h>
+#include <WebServerFiles.cpp>
 
-#include <datalogger_config.h>
+#include <FS.h>           //SPIFFS libraries.
+#include <user_interface.h>   //Functions to handle RTC memory.
 
-#include <FS.h>
+#include <datalogger_config.h>  //Configuration parameters.
 
+//----------------------------------------------------------------------------------------
 DHT dht22_sensor_1(DHT_SENSOR_1_PIN, DHTTYPE);    //Creates DHT22 sensor "sensor" object
 DHT dht22_sensor_2(DHT_SENSOR_2_PIN, DHTTYPE);    //Creates DHT22 sensor "sensor" object
 DHT dht22_sensor_3(DHT_SENSOR_3_PIN, DHTTYPE);    //Creates DHT22 sensor "sensor" object
@@ -48,7 +49,6 @@ float humidity_float [DATALOGGER_SENSOR_COUNT];
 
 ESP8266WiFiMulti WiFiMulti;
 
-
 typedef struct {
   int battery;
   int other;
@@ -59,20 +59,9 @@ int i;
 int buckets;
 bool toggleFlag;
 
-
-String processor(const String& var){
-  //Serial.println(var);
-  if(var == "TEMPERATURE"){
-    return String("25.5");
-  }
-  else if(var == "HUMIDITY"){
-    return String("50");
-  }
-  return String();
-}
+ESP8266WebServer server(8080);
 
 
-AsyncWebServer server(8080);
 
 void setup() {
   portInit();
@@ -162,6 +151,7 @@ void setup() {
 
 void loop() {
 
+  server.handleClient(); //Handling of incoming requests
   //Waits for WiFi connection
 /*   if ((WiFiMulti.run() == WL_CONNECTED)) {
     Serial.printf("WiFi Connected!");
@@ -245,8 +235,8 @@ unsigned char saveDataRTC(int address, void *data, unsigned short int bytes){
     uint8 d = ((uint8*)(data))[0];
     Serial.printf("\nData written to RTC memory:  ");
     Serial.printf("address: %d / ", i);
-    Serial.printf("bytes: %d\n", bytes);
-    Serial.printf("data:  \n", bytes);
+    Serial.printf("bytes: %d \n", bytes);
+    Serial.printf("data:");
 
     for (unsigned short x=0; x < bytes; x++){
     Serial.printf("%x",  d);
@@ -441,22 +431,22 @@ void wifiTurnOn(void){
 }
 
 
+void handleHome(void){
+  //Returns main page.
+  server.send(200, "text/html", index_html);
+  Serial.println("Homepage sent.");
+}
+
 unsigned char runWebServer(void){
 
-  unsigned long currentTime = millis();   //Current time
-  unsigned long previousTime = 0;         //Previous time
-  const long timeoutTime = 2000;          //Define timeout time in milliseconds (example: 2000ms = 2s)
-    
   String ap_ssid="Datalogger";
   String ap_pssw="123456789!";
   
   //IPAddress local_IP(192,168,2,2);  //192.168.2.2
   //IPAddress gateway(192,168,2,1);   //192.168.2.1
   //IPAddress subnet(255,255,255,0);  //255.255.255.255
+  //WiFi.softAPConfig(local_IP, gateway, subnet);
 
-
-
-//WiFi.softAPConfig(local_IP, gateway, subnet);
   WiFi.mode(WIFI_AP);
   while(!WiFi.softAP(ap_ssid, ap_pssw))
   {
@@ -473,20 +463,36 @@ unsigned char runWebServer(void){
   Serial.println(ap_ssid);
   Serial.print("IP address:\t");
   Serial.println(WiFi.softAPIP());
+  Serial.print("MAC address:\t");
+  Serial.println(WiFi.macAddress());
+ 
+  
+  server.on("/",handleHome);
+  server.on("/box_network_config",);
+  // server.on("",);
+  // server.on("",);
+  // server.on("",);
+  // server.on("",);
+
+
+  // server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+  //   Serial.print("\n HTTP / :");
+  //   request->send_P(200, "text/html", index_html, processor);
+  // });
+  // server.on("/test", HTTP_GET, [](AsyncWebServerRequest *request){
+  //   Serial.print("\n HTTP /test :");
+  //   request->send_P(200, "text/plain", "\n\n    TEST OK!!");
+  // });
+  // server.on("/change_network_config", HTTP_POST, [](AsyncWebServerRequest *request){
+  //   Serial.print("\n HTTP /change_network_config :");
+  //   request->send_P(200, "text/plain", "\n\nParámetros modificados correctamente.");
+  // });
+  //  server.on("/change_server_config", HTTP_POST, [](AsyncWebServerRequest *request){
+  //   Serial.print("\n HTTP /change_server_config :");
+  //   request->send_P(200, "text/plain", "\n\nParámetros modificados correctamente.");
+  // });
 
   
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    Serial.print("\n HTTP / :");
-    request->send_P(200, "text/html", index_html, processor);
-  });
-  server.on("/test", HTTP_GET, [](AsyncWebServerRequest *request){
-    Serial.print("\n HTTP /test :");
-    request->send_P(200, "text/plain", "\n\n    TEST OK!!");
-  });
-  server.on("/confirm", HTTP_GET, [](AsyncWebServerRequest *request){
-    Serial.print("\n HTTP /confirm :");
-    request->send_P(200, "text/plain", "\n\nParámetros modificados correctamente.");
-  });
-
   return(1);
+
 }
