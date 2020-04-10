@@ -9,7 +9,6 @@
 
 #include <Hash.h>
 //#include <ESPAsyncWebServer.h>
-#include <ESP8266WebServer.h>
 //#include <ESPAsyncTCP.h>
 #include <WebServerFiles.cpp>
 
@@ -28,26 +27,29 @@ DHT dht22_sensor_4(DHT_SENSOR_4_PIN, DHTTYPE);    //Creates DHT22 sensor "sensor
 //Initialization functions.
 void portInit(void);
 void SetSensorPower(unsigned char state);
+void wifiTurnOn(void);
+void wifiTurnOff(void);
 void goDeepSleep(uint64_t time);
 
 void* stringToArray(std::string origin_string);
 String generateMeasurementValue(unsigned char type, float value);  //Converts measurements into valid format
+unsigned char saveMeasurementsToRAM(int address, void *data, unsigned short int bytes);
 unsigned char saveDataRTC(int address, void *data, unsigned short int bytes); //Saves data to RTC memory.
 void readDataRTC(int address, void *data, unsigned short int bytes);
 void rtcMemoryInit(void);
 
-void wifiTurnOn(void);
-void wifiTurnOff(void);
+//Functions to handle 
+void handleHome(void);
+void handleChangeNetworkConfig(void);
+void handleChangeServerConfig(void);
 unsigned char runWebServer(void);
+unsigned char handleFormatRam(void);
+unsigned char handleFormatFlash(void);
 //---------------------------------------------------------------------------------------------------------------------
-// Last temperature & humidity, updated in loop()
-//  [0] --> Sensor 1
-//  [1] --> Sensor 2
-
-float temperature_float [DATALOGGER_SENSOR_COUNT];
-float humidity_float [DATALOGGER_SENSOR_COUNT];
 
 ESP8266WiFiMulti WiFiMulti;
+ESP8266WebServer server(8080);
+
 
 typedef struct {
   int battery;
@@ -58,9 +60,6 @@ rtcStore rtcMem;
 int i;
 int buckets;
 bool toggleFlag;
-
-ESP8266WebServer server(8080);
-
 
 
 void setup() {
@@ -196,30 +195,20 @@ void loop() {
   } 
 */
 
-  
-  //rtcMemoryInit();
 
 
-  // uint8 buf[64];
-  // readDataRTC(RTC_MEMORY_START_BLOCK, &buf, 4);
+ 
 
-  // measurement m;
-  // m.id_sensor= 1;
-  // m.humidity=75;
-  // m.temperature=240;
-  // m.timestamp=1234567890;
 
-  // saveDataRTC(0, &m, sizeof(m));
 
-  //goDeepSleep(60e6);
 
   
 }
 
 void rtcMemoryInit(void){
   //Initializes 
-  uint8_t initpos = RTC_MEMORY_POINTER_ADDRESS;
-  int mem_pointer = RTC_MEMORY_POINTER_ADDRESS;
+  uint8_t initpos = RTC_MEMORY_MEASUREMENTS_START_BLOCK;
+  int mem_pointer = RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK;
   system_rtc_mem_write(mem_pointer, &initpos, sizeof(initpos)); 
 }
 
@@ -252,16 +241,36 @@ void readDataRTC(int address, void *data, unsigned short int bytes) {
 
   Serial.printf("\n\n     Read data address %d:\n",address);
   for(unsigned short int i=0; i < bytes; i++){
-      Serial.printf("%d",((uint8*)(data))[i]);
+      Serial.printf("%d ",((uint8*)(data))[i]);
   }
 
   
 }
 
-unsigned char saveMeasurementsToRAM(void){
-  
-  return(1);
+unsigned char saveMeasurementsToRAM(int address, void *data, unsigned short int bytes){
+  /*  Get current pointer position (last_measurement_index + 1).
+      Save new n blocks of data (multiple of 4B or 32 bits).
+      Update pointer position (+= RTC_MEMORY_BLOCK_SIZE)
+  */
+  uint8_t buffer[RTC_MEMORY_BLOCK_SIZE];
+  uint8_t pointer_obtained_measurement;
+  system_rtc_mem_read(RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK, buffer, RTC_MEMORY_BLOCK_SIZE);  //Read pointer position
+  pointer_obtained_measurement = buffer[0];
+  yield();  //Feeds watchdog.
 
+  system_rtc_mem_write(pointer_obtained_measurement,data,bytes);  //Writes measurements in the position the pointer is indexing.
+  ////////////////////////////////////////////////////////////////////
+  Serial.printf("\nData written to RTC memory:  ");
+  Serial.printf("address: %d / ", pointer_obtained_measurement);
+  Serial.printf("bytes: %d \n", bytes);
+  Serial.printf("data:");
+  for (unsigned short x=0; x < bytes; x++){
+    Serial.printf("%x", ((uint8_t*)(data))[x] );
+  }///////////////////////////////////////////////////////////////////
+  
+  system_rtc_mem_write(RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK,buffer,RTC_MEMORY_BLOCK_SIZE); //Updates the pointer position.
+  
+  return 1;
 }
 
 String generatePOSTRequest( uint16_t id_transceiver, uint8_t battery_level,   //Header elements
@@ -431,12 +440,6 @@ void wifiTurnOn(void){
 }
 
 
-void handleHome(void){
-  //Returns main page.
-  server.send(200, "text/html", index_html);
-  Serial.println("Homepage sent.");
-}
-
 unsigned char runWebServer(void){
 
   String ap_ssid="Datalogger";
@@ -468,31 +471,95 @@ unsigned char runWebServer(void){
  
   
   server.on("/",handleHome);
-  server.on("/box_network_config",);
-  // server.on("",);
-  // server.on("",);
-  // server.on("",);
-  // server.on("",);
+  server.on("/change_network_config", handleChangeNetworkConfig);
+  server.on("/change_server_config", handleChangeServerConfig);
+  server.on("/format_ram",handleFormatRam);
+  server.on("/format_flash",handleFormatFlash);
 
-
-  // server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-  //   Serial.print("\n HTTP / :");
-  //   request->send_P(200, "text/html", index_html, processor);
-  // });
-  // server.on("/test", HTTP_GET, [](AsyncWebServerRequest *request){
-  //   Serial.print("\n HTTP /test :");
-  //   request->send_P(200, "text/plain", "\n\n    TEST OK!!");
-  // });
-  // server.on("/change_network_config", HTTP_POST, [](AsyncWebServerRequest *request){
-  //   Serial.print("\n HTTP /change_network_config :");
-  //   request->send_P(200, "text/plain", "\n\nParámetros modificados correctamente.");
-  // });
-  //  server.on("/change_server_config", HTTP_POST, [](AsyncWebServerRequest *request){
-  //   Serial.print("\n HTTP /change_server_config :");
-  //   request->send_P(200, "text/plain", "\n\nParámetros modificados correctamente.");
-  // });
-
-  
   return(1);
-
 }
+
+
+void handleHome(void){
+  Serial.print("/");
+  //Returns main page.
+  server.send(200, "text/html", index_html);
+}
+
+void handleChangeNetworkConfig(void){
+    Serial.print("/change_network_config");
+    String new_ssid, new_password;
+    
+    if (server.hasArg("new_ssid") && server.hasArg("new_password"))
+    {
+        new_ssid = server.arg("new_ssid");
+        new_password = server.arg("new_password");
+        //Change parameters in Flash config file.
+
+        server.send(200, "text/plain", "Network credentials modified correctly.");
+        // Serial.printf("\nNetwork credentials modified:\nSSID:%s\nPass:%s",new_ssid,new_password);
+    }
+    else
+    {
+        server.send(200, "text/html", "ERROR: Wrong parameters.");
+    }
+}
+
+void handleChangeServerConfig(void){
+  Serial.print("/change_server_config");
+  String new_ip, new_port;
+  
+  if (server.hasArg("ip") && server.hasArg("port"))
+  {
+      new_ip = server.arg("new_ip");
+      new_port = server.arg("new_port");
+      /* Validate ip and port number */
+
+      //Change parameters in Flash config file.
+      server.send(200, "text/plain", "Server parameters modified correctly.");
+      // Serial.printf("\nServer parameters modified:\nIP:%s\nPort:%s",new_ip,new_port);
+  }
+  else
+  {
+      server.send(200, "text/html", "ERROR: Wrong parameters.");
+  } 
+}
+
+unsigned char handleFormatRam(void){
+
+  if (server.hasArg("command"))
+  {
+      if(server.arg("command") == "format_confirm"){
+        /*Call to format RAM*/
+        rtcMemoryInit();
+        Serial.printf("RAM Formatted.");
+        server.send(200, "text/plain", "Server parameters modified correctly.");
+      }
+   }
+  else
+  {
+      server.send(200, "text/html", "ERROR: Wrong parameters.");
+  } 
+
+
+
+
+  return(1);  //Returns 1 to inform that RAM has been erased correctly. This should drive to a reboot.
+}
+
+unsigned char handleFormatFlash(void){
+  Serial.printf("FLASH Formatted.");
+
+ uint8 buf[64];
+  readDataRTC(RTC_MEMORY_START_BLOCK, &buf, 64);
+
+  measurement m;
+  m.id_sensor= 1;
+  m.humidity=75;
+  m.temperature=240;
+  m.timestamp=1234567890;
+  saveMeasurementsToRAM(0, &m, sizeof(m));
+
+  return(1);  //Returns 1 to inform that FLASH has been erased correctly. This should drive to a reboot.
+}
+

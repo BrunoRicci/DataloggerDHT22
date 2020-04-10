@@ -1,11 +1,12 @@
 #include <avr/pgmspace.h>
+#include <ESP8266WebServer.h>
 
 
 
-const char index_html[] PROGMEM = R"rawliteral(
-<!DOCTYPE HTML><html>
+
+const char index_html[] PROGMEM = R"rawliteral(<!DOCTYPE HTML><html>
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
   <style>
     html {
      font-family: Arial;
@@ -13,8 +14,8 @@ const char index_html[] PROGMEM = R"rawliteral(
      margin: 0px auto;
      text-align: center;
     }
-    h2 { font-size: 3.0rem; }
-    p { font-size: 3.0rem; }
+    h2 { font-size: 2.0rem; }
+    p { font-size: 2.0rem; }
     .units { font-size: 1.2rem; }
     .dht-labels{
       font-size: 1.5rem;
@@ -23,7 +24,7 @@ const char index_html[] PROGMEM = R"rawliteral(
     }
     .box{
     background-color: #d3d3d3;
-    width: 300px;
+    width: 85%;
     border: 2px solid #3a67fc ;
     border-radius: 5px;
     padding: 20px;
@@ -36,7 +37,7 @@ const char index_html[] PROGMEM = R"rawliteral(
   </style>
 </head>
 <body>
-    <h2>Configuración del datalogger</h2>
+    <h2>Configuraci&oacuten del datalogger</h2>
   
     <div id="box_network_config" class="box center">
         <b>Red</b>
@@ -57,8 +58,8 @@ const char index_html[] PROGMEM = R"rawliteral(
         <b>Servidor</b>
         <br>
         <br>
-        <form method="POST" action="change_server_config">
-            <input type="text" placeholder="IPv4" name="IP" width="50%" border-radius="2px">
+        <form method="POST" action="change_server_config" margin="10px">
+            <input type="text" placeholder="IPv4" name="ip" width="50%" border-radius="2px">
             <br>
             <input type="text" placeholder="Puerto" name="port" width="50%">
             <br>
@@ -87,7 +88,8 @@ const char index_html[] PROGMEM = R"rawliteral(
             console.log("RAM memory will format...");
             var xhttp = new XMLHttpRequest();
             xhttp.open("POST", "format_ram", true);
-            xhttp.send();
+            xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+            xhttp.send("command=format_confirm");          //Actual data to be sent
         } 
         else {
             console.log("RAM memory format cancelled.");//Cancelled
@@ -98,12 +100,14 @@ const char index_html[] PROGMEM = R"rawliteral(
         if (confirm("¿Confirma que desea formatear la FLASH?")) {
             console.log("FLASH memory will format...");
             var xhttp = new XMLHttpRequest();
-            xhttp.open("POST", "format_ram", true);
-            xhttp.send();
-        } 
+            xhttp.open("POST", "format_flash", true);
+            xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+            xhttp.send("command=format_confirm");
+        }
         else {
-            console.log("FLASH memory format cancelled.");//Cancelled
+            console.log("FLASH memory format cancelled.");  //Cancelled
         }
     }
 </script>
 </html>)rawliteral";
+

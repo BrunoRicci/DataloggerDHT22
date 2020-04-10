@@ -43,15 +43,16 @@
 #define RTC_MEMORY_START_ADDRESS        256
 #define RTC_MEMORY_BLOCK_SIZE           4       //Block size in bytes.   
 
-#define RTC_MEMORY_RESERVED_BLOCKS      1      //Blocks not used for measurements.
+#define RTC_MEMORY_RESERVED_BLOCKS      10      //Blocks not used for measurements.
 #define RTC_MEMORY_END_ADDRESS          (RTC_MEMORY_SIZE)
 #define RTC_MEMORY_START_BLOCK          ((RTC_MEMORY_START_ADDRESS/RTC_MEMORY_BLOCK_SIZE))                    
 #define RTC_MEMORY_END_BLOCK            (RTC_MEMORY_END_ADDRESS/RTC_MEMORY_BLOCK_SIZE)
 
-#define RTC_MEMORY_POINTER_ADDRESS      RTC_MEMORY_START_BLOCK
-
-#define RTCMEMORYLEN 127
-#define RTCMEMORYSTART RTC_MEMORY_START_BLOCK
+#define RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK   RTC_MEMORY_START_BLOCK
+#define RTC_MEMORY_MEASUREMENTS_START_BLOCK     (RTC_MEMORY_START_BLOCK + RTC_MEMORY_RESERVED_BLOCKS)
+#define RTC_MEMORY_MEASUREMENTS_END_BLOCK       (RTC_MEMORY_MEASUREMENTS_START_BLOCK + (MEASUREMENTS_DAILY_ARCHIVE_SIZE * 3))
+// #define RTCMEMORYLEN 127
+// #define RTCMEMORYSTART RTC_MEMORY_START_BLOCK
 
 typedef struct{
         uint32_t timestamp;     //seconds from 1970
@@ -62,7 +63,7 @@ typedef struct{
 
 typedef struct{
         uint16_t pointer_last_sent_measurement;
-        uint16_t pointer_last_saved_measurement;        //Block with last saved daily data.
+        uint16_t pointer_obtained_measurement;        //Block with last saved daily data.
 }rtcMemory;      //structure alias.
 
 /*---------------------------------------------------------*/
