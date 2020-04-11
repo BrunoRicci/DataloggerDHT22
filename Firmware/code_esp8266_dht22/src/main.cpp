@@ -33,7 +33,7 @@ void goDeepSleep(uint64_t time);
 
 void* stringToArray(std::string origin_string);
 String generateMeasurementValue(unsigned char type, float value);  //Converts measurements into valid format
-unsigned char saveMeasurementsToRAM(int address, void *data, unsigned short int bytes);
+unsigned char saveMeasurementsToRAM(void *data, unsigned short int bytes);
 unsigned char saveDataRTC(int address, void *data, unsigned short int bytes); //Saves data to RTC memory.
 void readDataRTC(int address, void *data, unsigned short int bytes);
 void rtcMemoryInit(void);
@@ -195,7 +195,15 @@ void loop() {
   } 
 */
 
-
+  if (digitalRead(14))
+  {
+    digitalWrite(15,HIGH);
+  }
+  else
+  {
+    digitalWrite(15,LOW);
+  }
+  
 
  
 
@@ -236,18 +244,25 @@ unsigned char saveDataRTC(int address, void *data, unsigned short int bytes){
 }
 
 void readDataRTC(int address, void *data, unsigned short int bytes) {
-  system_rtc_mem_read(address, data, bytes);
+  // system_rtc_mem_read(address, data, bytes);
+ 
+
+  measurement m;
+  system_rtc_mem_read(address, &m, bytes);
   yield();
 
-  Serial.printf("\n\n     Read data address %d:\n",address);
-  for(unsigned short int i=0; i < bytes; i++){
-      Serial.printf("%d ",((uint8*)(data))[i]);
-  }
-
-  
+  Serial.printf("\n\nRead measurements:   (block: %d)\n",address);
+  Serial.printf("timestamp: %d\n",m.timestamp);
+  Serial.printf("id_sensor: %d\n",m.id_sensor);
+  Serial.printf("temperature: %d\n",m.temperature);
+  Serial.printf("humidity: %d\n",m.humidity);  
+  // Serial.printf("\n\n     Read data address %d:\n",address);
+  // for(unsigned short int i=0; i < bytes; i++){
+  //     Serial.printf("%X ",((uint8*)(data))[i]);
+  // }
 }
 
-unsigned char saveMeasurementsToRAM(int address, void *data, unsigned short int bytes){
+unsigned char saveMeasurementsToRAM(void *data, unsigned short int bytes){
   /*  Get current pointer position (last_measurement_index + 1).
       Save new n blocks of data (multiple of 4B or 32 bits).
       Update pointer position (+= RTC_MEMORY_BLOCK_SIZE)
@@ -256,6 +271,9 @@ unsigned char saveMeasurementsToRAM(int address, void *data, unsigned short int 
   uint8_t pointer_obtained_measurement;
   system_rtc_mem_read(RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK, buffer, RTC_MEMORY_BLOCK_SIZE);  //Read pointer position
   pointer_obtained_measurement = buffer[0];
+  
+  Serial.printf("pointer_obtained_measurement: %X / ", pointer_obtained_measurement);
+
   yield();  //Feeds watchdog.
 
   system_rtc_mem_write(pointer_obtained_measurement,data,bytes);  //Writes measurements in the position the pointer is indexing.
@@ -265,10 +283,12 @@ unsigned char saveMeasurementsToRAM(int address, void *data, unsigned short int 
   Serial.printf("bytes: %d \n", bytes);
   Serial.printf("data:");
   for (unsigned short x=0; x < bytes; x++){
-    Serial.printf("%x", ((uint8_t*)(data))[x] );
+    Serial.printf("%X", ((uint8_t*)(data))[x] );
   }///////////////////////////////////////////////////////////////////
   
+  buffer[0] = pointer_obtained_measurement+RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
   system_rtc_mem_write(RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK,buffer,RTC_MEMORY_BLOCK_SIZE); //Updates the pointer position.
+  Serial.printf("new pointer value: %X / ", (unsigned int)(buffer[0]));
   
   return 1;
 }
@@ -389,6 +409,13 @@ void SetSensorPower(unsigned char state){
 
 void portInit(void){
   pinMode(PWR_SENSORS_PIN, OUTPUT);   //GPIO12 as output
+  pinMode(14, INPUT);
+  pinMode(15, OUTPUT);
+  pinMode(13, OUTPUT);
+  pinMode(12, OUTPUT);
+  digitalWrite(15,LOW);
+  digitalWrite(13,HIGH);
+  digitalWrite(12,HIGH);
   SetSensorPower(OFF);          //Sensors start turned off.
 }
 
@@ -440,7 +467,7 @@ void wifiTurnOn(void){
 }
 
 
-unsigned char runWebServer(void){
+unsigned char runWebServer(void){ 
 
   String ap_ssid="Datalogger";
   String ap_pssw="123456789!";
@@ -526,39 +553,33 @@ void handleChangeServerConfig(void){
 }
 
 unsigned char handleFormatRam(void){
-
   if (server.hasArg("command"))
   {
-      if(server.arg("command") == "format_confirm"){
-        /*Call to format RAM*/
-        rtcMemoryInit();
-        Serial.printf("RAM Formatted.");
-        server.send(200, "text/plain", "Server parameters modified correctly.");
-      }
-   }
-  else
-  {
+    if(server.arg("command") == "format_confirm"){
+      /*Call to format RAM*/
+      rtcMemoryInit();
+      Serial.printf("RAM Formatted.");
+      server.send(200, "text/plain", "Server parameters modified correctly.");
+    }
+  }
+  else{
       server.send(200, "text/html", "ERROR: Wrong parameters.");
   } 
-
-
-
-
   return(1);  //Returns 1 to inform that RAM has been erased correctly. This should drive to a reboot.
 }
 
 unsigned char handleFormatFlash(void){
+  uint8 buf[64];
+  readDataRTC(RTC_MEMORY_MEASUREMENTS_START_BLOCK, &buf, 12);
   Serial.printf("FLASH Formatted.");
+      server.send(200, "text/html", "<h2>QUIERE BIJA!!!!</h2>");
 
- uint8 buf[64];
-  readDataRTC(RTC_MEMORY_START_BLOCK, &buf, 64);
-
-  measurement m;
-  m.id_sensor= 1;
-  m.humidity=75;
-  m.temperature=240;
-  m.timestamp=1234567890;
-  saveMeasurementsToRAM(0, &m, sizeof(m));
+  // measurement m;
+  // m.id_sensor= 1;
+  // m.humidity=75;
+  // m.temperature=240;
+  // m.timestamp=1234567890;
+  // saveMeasurementsToRAM(&m, sizeof(m));
 
   return(1);  //Returns 1 to inform that FLASH has been erased correctly. This should drive to a reboot.
 }

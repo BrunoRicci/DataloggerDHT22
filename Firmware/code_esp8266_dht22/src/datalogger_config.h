@@ -50,20 +50,20 @@
 
 #define RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK   RTC_MEMORY_START_BLOCK
 #define RTC_MEMORY_MEASUREMENTS_START_BLOCK     (RTC_MEMORY_START_BLOCK + RTC_MEMORY_RESERVED_BLOCKS)
-#define RTC_MEMORY_MEASUREMENTS_END_BLOCK       (RTC_MEMORY_MEASUREMENTS_START_BLOCK + (MEASUREMENTS_DAILY_ARCHIVE_SIZE * 3))
+#define RTC_MEMORY_MEASUREMENT_BLOCK_SIZE       (sizeof(measurement)/RTC_MEMORY_BLOCK_SIZE)
+#define RTC_MEMORY_MEASUREMENTS_END_BLOCK       (RTC_MEMORY_MEASUREMENTS_START_BLOCK + (12 * RTC_MEMORY_MEASUREMENT_BLOCK_SIZE))
 // #define RTCMEMORYLEN 127
 // #define RTCMEMORYSTART RTC_MEMORY_START_BLOCK
 
 typedef struct{
-        uint32_t timestamp;     //seconds from 1970
-        uint16_t id_sensor;     //sensor id
-        int16_t  temperature;   //temperature
-        uint8_t  humidity;      //humidity
+        uint32_t timestamp;     //seconds from 1970 at UTC
+        uint16_t id_sensor[DATALOGGER_SENSOR_COUNT];     //sensor id
+        int16_t  temperature[DATALOGGER_SENSOR_COUNT];   //temperature
+        uint8_t  humidity[DATALOGGER_SENSOR_COUNT];      //humidity
 }measurement;      //structure alias.
 
 typedef struct{
         uint16_t pointer_last_sent_measurement;
         uint16_t pointer_obtained_measurement;        //Block with last saved daily data.
 }rtcMemory;      //structure alias.
-
 /*---------------------------------------------------------*/
