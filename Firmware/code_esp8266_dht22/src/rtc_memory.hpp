@@ -1,8 +1,5 @@
 #include <Arduino.h>
 
-#include <datalogger_config.h> 
-
-
 
 
 class RtcMemory{

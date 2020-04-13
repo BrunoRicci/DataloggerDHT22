@@ -1,8 +1,9 @@
 #include <rtc_memory.hpp>
 #include <user_interface.h>   //Functions to handle RTC memory.
+#include <datalogger_config.h> 
 
-
-
+RtcMemory::RtcMemory(void){ //Constructor
+}
 
 void RtcMemory::clearMeasurements(void){
   uint8_t initpos = RTC_MEMORY_MEASUREMENTS_START_BLOCK;

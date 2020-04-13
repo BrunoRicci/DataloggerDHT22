@@ -222,12 +222,12 @@ bool readDataFromFlash(String path, uint32_t index, void* data, unsigned int byt
 bool writeDataToFlash(String path, void* data, unsigned int bytes, char mode) { // send the right file to the client (if it exists)
   //todo: validate data and bytes parameters. ALso chech if path exists to avoid creating multiple files unnecessarily.
     
-  //////////////// DEBUG /////////////////
-  uint8_t buffer[bytes+1];
-  for(unsigned int i=0; i < bytes; i++){
-    buffer[i] = ((uint8_t*)data)[i];      //Copies data into a buffer to be displayed.
-  }
-  ////////////////////////////////////////
+  // //////////////// DEBUG /////////////////
+  // uint8_t buffer[bytes+1];
+  // for(unsigned int i=0; i < bytes; i++){
+  //   buffer[i] = ((uint8_t*)data)[i];      //Copies data into a buffer to be displayed.
+  // }
+  // ////////////////////////////////////////
 
   File file = SPIFFS.open(path, "a"); //Opens file specified in path parameter to write.
   if (!file) {    //If file is unable to open...
@@ -316,7 +316,7 @@ String generatePOSTRequest( uint16_t id_transceiver, uint8_t battery_level,   //
 }
 
 int32_t generateMeasurementValue(unsigned char type, float value){
-  int32_t measurement; 
+  int32_t measurement=0; 
 
   if (type == TEMPERATURE){
      // -200 ~ 800 -> -20ºC to 80ºC
