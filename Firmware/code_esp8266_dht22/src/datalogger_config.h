@@ -22,12 +22,19 @@
 #define DHT_SENSOR_3_PIN        4
 #define DHT_SENSOR_4_PIN        5
 
-#define PWR_SENSORS_PIN  13
+#define PWR_SENSORS_PIN         13
+#define BATTERY_SENSE_PIN       A0      //A0 oin as analog
+
 
 //Sensor model (DHT sensor library configuration).
 #define DHTTYPE DHT22           
 
 //Power managements parameters.
+#define ADC_VOLTAGE_MV          3300
+#define VBAT_VADC_RATIO         (1.27)
+#define BATTERY_MAX_VOLTAGE     4200
+#define BATTERY_MIN_VOLTAGE     3300
+
 #define ON  1
 #define OFF 0
 
@@ -52,8 +59,7 @@
 #define RTC_MEMORY_MEASUREMENTS_START_BLOCK     (RTC_MEMORY_START_BLOCK + RTC_MEMORY_RESERVED_BLOCKS)
 #define RTC_MEMORY_MEASUREMENT_BLOCK_SIZE       (sizeof(measurement)/RTC_MEMORY_BLOCK_SIZE)
 #define RTC_MEMORY_MEASUREMENTS_END_BLOCK       (RTC_MEMORY_MEASUREMENTS_START_BLOCK + (12 * RTC_MEMORY_MEASUREMENT_BLOCK_SIZE))
-// #define RTCMEMORYLEN 127
-// #define RTCMEMORYSTART RTC_MEMORY_START_BLOCK
+
 
 typedef struct{
         uint32_t timestamp;     //seconds from 1970 at UTC
@@ -62,8 +68,10 @@ typedef struct{
         uint8_t  humidity[DATALOGGER_SENSOR_COUNT];      //humidity
 }measurement;      //structure alias.
 
-typedef struct{
+typedef struct{   
         uint16_t pointer_last_sent_measurement;
         uint16_t pointer_obtained_measurement;        //Block with last saved daily data.
 }rtcMemory;      //structure alias.
 /*---------------------------------------------------------*/
+
+#define MEASUREMENTS_FILE_NAME  "measurements.txt"

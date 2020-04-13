@@ -72,12 +72,8 @@ const char index_html[] PROGMEM = R"rawliteral(<!DOCTYPE HTML><html>
         <b>Memorias</b>
         <br>
         <br>
-
         <button onclick="formatRam()">Formatear RAM</button>
-        <button onclick="formatFlash()">Formatear FLASH</button>
-
-
-    
+        <button onclick="formatFlash()">Formatear FLASH</button>    
     </div>
 
 </body>

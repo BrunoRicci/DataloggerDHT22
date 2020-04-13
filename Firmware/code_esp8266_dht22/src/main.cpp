@@ -14,6 +14,7 @@
 
 #include <FS.h>           //SPIFFS libraries.
 #include <user_interface.h>   //Functions to handle RTC memory.
+#include <rtc_memory.hpp>
 
 #include <datalogger_config.h>  //Configuration parameters.
 
@@ -26,13 +27,17 @@ DHT dht22_sensor_4(DHT_SENSOR_4_PIN, DHTTYPE);    //Creates DHT22 sensor "sensor
 //---------------------------------------------------------------------------------------------------------------------
 //Initialization functions.
 void portInit(void);
+uint8_t getBatteryLevel(void);           //Get battery level percentage (0 to 100%).
+void setBatteryState(uint8 state=ON);     //Connects or disconnects battery.
 void SetSensorPower(unsigned char state);
 void wifiTurnOn(void);
 void wifiTurnOff(void);
 void goDeepSleep(uint64_t time);
 
 void* stringToArray(std::string origin_string);
-String generateMeasurementValue(unsigned char type, float value);  //Converts measurements into valid format
+int32_t generateMeasurementValue(unsigned char type, float value);
+String formatMeasurementValue(unsigned char type, float value);  //Converts measurements into valid format
+void clearMeasurementsRAM(void);
 unsigned char saveMeasurementsToRAM(void *data, unsigned short int bytes);
 unsigned char saveDataRTC(int address, void *data, unsigned short int bytes); //Saves data to RTC memory.
 void readDataRTC(int address, void *data, unsigned short int bytes);
@@ -51,21 +56,21 @@ ESP8266WiFiMulti WiFiMulti;
 ESP8266WebServer server(8080);
 
 
-typedef struct {
-  int battery;
-  int other;
-} rtcStore;
-
-rtcStore rtcMem;
-int i;
-int buckets;
-bool toggleFlag;
-
-
 void setup() {
   portInit();
-
   wifiTurnOff();
+
+  delay(200);
+  if (digitalRead(14))    //
+  {
+    digitalWrite(15,HIGH);
+    getBatteryLevel();
+   
+  }
+  else
+  {
+    digitalWrite(15,LOW);
+  }
 
   Serial.begin(115200);
 
@@ -75,64 +80,9 @@ void setup() {
   dht22_sensor_4.begin();
 
   runWebServer();
+  SPIFFS.begin();
 
 //////////////////////////////////////////////////////////////
-/*   Serial.println();
-  Serial.println("Start");
-  buckets = (sizeof(rtcMem) / 4);   //Number of buckets needed to store X bytes in the memory.
-  if (buckets == 0) buckets = 1;    //Always greater than 1
-  Serial.printf("Buckets %d\n",buckets);
-  system_rtc_mem_read(64, &toggleFlag, 4);  //Reads first block (bucket) which contains a flag
-  Serial.printf("toggle Flag: %d\n",toggleFlag);
-  if (toggleFlag) {
-    Serial.println("Start Writing");
-    for (i = 0; i < RTCMEMORYLEN / buckets; i++) {
-      rtcMem.battery = i;
-      rtcMem.other = i * 11;
-      int rtcPos = RTCMEMORYSTART + RTC_MEMORY_RESERVED_BLOCKS + i * buckets;
-      //                  address    data   quantity of bytes
-      system_rtc_mem_write(rtcPos, &rtcMem, buckets * 4);  //Writes data
-      toggleFlag = false;   
-      system_rtc_mem_write(64, &toggleFlag, 4); //Modifies the flag.
-
-      Serial.printf("i: %d\n", i);
-      Serial.printf(" Position: %d\n", rtcPos);
-      Serial.printf(", battery: %d\n", rtcMem.battery);
-      Serial.printf(", other: %d\n", rtcMem.other);
-      yield();
-    }
-    Serial.println("Writing done");
-  }
-  else {
-    Serial.println("Start reading");
-    for (i = 0; i < RTCMEMORYLEN / buckets; i++) {
-      int rtcPos = RTCMEMORYSTART+ RTC_MEMORY_RESERVED_BLOCKS + i * buckets;
-      system_rtc_mem_read(rtcPos, &rtcMem, sizeof(rtcMem));
-      toggleFlag = true;
-      system_rtc_mem_write(64, &toggleFlag, 4);
-
-      Serial.printf("i: %d\n", i);
-      Serial.printf(" Position: %d\n", rtcPos);
-      Serial.printf(", battery: %d\n", rtcMem.battery);
-      Serial.printf(", other: %d\n", rtcMem.other);
-      yield();
-    }
-    Serial.println("reading done");
-    for (i = 0; i < RTCMEMORYLEN / buckets; i++) {
-      rtcMem.battery = 0;
-      rtcMem.other = 0;
-      int rtcPos = RTCMEMORYSTART + i * buckets;
-      system_rtc_mem_write(rtcPos, &rtcMem, buckets * 4);
-    }
-  }
-  Serial.println("before sleep");
-  goDeepSleep(60e6);
-
-
- */
-//////////////////////////////////////////////////////////////
-
-
 
 /* 
   SetSensorPower(ON);
@@ -145,7 +95,8 @@ void setup() {
   SetSensorPower(OFF);
 */
   
-
+  
+  
 }
 
 void loop() {
@@ -195,103 +146,183 @@ void loop() {
   } 
 */
 
-  if (digitalRead(14))
-  {
-    digitalWrite(15,HIGH);
-  }
-  else
-  {
-    digitalWrite(15,LOW);
-  }
+/* 
+  measurement m;
+  m.timestamp=1234567890; //Put current timestamp
+  m.id_sensor[0]=1;   
+  m.id_sensor[1]=2; 
+  m.id_sensor[2]=3; 
+  m.id_sensor[3]=4;
+  m.temperature[0]=generateMeasurementValue(TEMPERATURE, dht22_sensor_1.readTemperature()); 
+  m.temperature[1]=generateMeasurementValue(TEMPERATURE, dht22_sensor_2.readTemperature());
+  m.temperature[2]=generateMeasurementValue(TEMPERATURE, dht22_sensor_3.readTemperature());
+  m.temperature[3]=generateMeasurementValue(TEMPERATURE, dht22_sensor_4.readTemperature());
+  m.humidity[0]=generateMeasurementValue(HUMIDITY, dht22_sensor_1.readHumidity()); 
+  m.humidity[1]=generateMeasurementValue(HUMIDITY, dht22_sensor_2.readHumidity()); 
+  m.humidity[2]=generateMeasurementValue(HUMIDITY, dht22_sensor_3.readHumidity()); 
+  m.humidity[3]=generateMeasurementValue(HUMIDITY, dht22_sensor_4.readHumidity());  
+  saveMeasurementsToRAM(&m, sizeof(m)); 
+*/
   
 
  
-
+  
 
 
 
   
+}
+
+void portInit(void){
+  pinMode(PWR_SENSORS_PIN, OUTPUT);   //GPIO12 as output
+  pinMode(14, INPUT);
+  pinMode(15, OUTPUT);
+  pinMode(13, OUTPUT);
+  pinMode(12, OUTPUT);
+  digitalWrite(15,LOW);
+  digitalWrite(13,HIGH);
+  digitalWrite(12,HIGH);
+  SetSensorPower(OFF);          //Sensors start turned off.
+
+
+}
+
+uint8_t getBatteryLevel(void){
+  uint16_t voltage = (uint16_t)((analogRead(BATTERY_SENSE_PIN))*(ADC_VOLTAGE_MV/1023));
+  uint16_t real_voltage = (uint16_t)((float)(voltage*VBAT_VADC_RATIO));   //Actual voltage before divider.
+  // Serial.printf("\nReal voltage = %dmV" ,real_voltage);
+  uint8_t percentage = ( ((real_voltage - BATTERY_MIN_VOLTAGE)*100) / (BATTERY_MAX_VOLTAGE-BATTERY_MIN_VOLTAGE) );
+  // Serial.printf("\nPercentage: %d" ,percentage);
+
+  return percentage;  //Returns battery percentage.
 }
 
 void rtcMemoryInit(void){
-  //Initializes 
-  uint8_t initpos = RTC_MEMORY_MEASUREMENTS_START_BLOCK;
-  int mem_pointer = RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK;
-  system_rtc_mem_write(mem_pointer, &initpos, sizeof(initpos)); 
-}
-
-unsigned char saveDataRTC(int address, void *data, unsigned short int bytes){
-  for (unsigned short i = RTC_MEMORY_START_BLOCK+1; i < RTC_MEMORY_END_BLOCK; i++)
-  { 
-
-    //uint8_t pointer_last_saved_measurement;
-    //system_rtc_mem_read(RTC_MEMORY_START_BLOCK, pointer_last_saved_measurement, sizeof(uint8_t));
-    system_rtc_mem_write(i,data,bytes);
-    yield();
-
-    uint8 d = ((uint8*)(data))[0];
-    Serial.printf("\nData written to RTC memory:  ");
-    Serial.printf("address: %d / ", i);
-    Serial.printf("bytes: %d \n", bytes);
-    Serial.printf("data:");
-
-    for (unsigned short x=0; x < bytes; x++){
-    Serial.printf("%x",  d);
-    }
-
-  }
-  return 1;
+  //Initializes rtm memory. Clears all pointers.
+  clearMeasurementsRAM();
 }
 
 void readDataRTC(int address, void *data, unsigned short int bytes) {
-  // system_rtc_mem_read(address, data, bytes);
- 
-
-  measurement m;
-  system_rtc_mem_read(address, &m, bytes);
+  system_rtc_mem_read(address, data, bytes);
   yield();
-
-  Serial.printf("\n\nRead measurements:   (block: %d)\n",address);
+  /////////////////// DEBUG ///////////////////////////
+  measurement m;
+  uint8 buffer[24];
+  system_rtc_mem_read(address, &m, bytes);
+  system_rtc_mem_read(address, &buffer, bytes);
+  Serial.printf("\n\nRead measurements:   (block: %d)   data: \n",address);
+   for (unsigned short x=0; x < bytes; x++){
+      Serial.printf("%X", ((uint8_t*)(buffer))[x] );
+    }
   Serial.printf("timestamp: %d\n",m.timestamp);
-  Serial.printf("id_sensor: %d\n",m.id_sensor);
-  Serial.printf("temperature: %d\n",m.temperature);
-  Serial.printf("humidity: %d\n",m.humidity);  
-  // Serial.printf("\n\n     Read data address %d:\n",address);
-  // for(unsigned short int i=0; i < bytes; i++){
-  //     Serial.printf("%X ",((uint8*)(data))[i]);
-  // }
+  Serial.printf("id_sensor: [%d,%d,%d,%d] \n",m.id_sensor[0],m.id_sensor[1],m.id_sensor[2],m.id_sensor[3]);
+  Serial.printf("temperature: [%d,%d,%d,%d] \n",m.temperature[0],m.temperature[1],m.temperature[2],m.temperature[3]);
+  Serial.printf("humidity: [%d,%d,%d,%d] \n",m.humidity[0],m.humidity[1],m.humidity[2],m.humidity[3]);
+  //////////////////////////////////////////////////////
 }
 
 unsigned char saveMeasurementsToRAM(void *data, unsigned short int bytes){
   /*  Get current pointer position (last_measurement_index + 1).
-      Save new n blocks of data (multiple of 4B or 32 bits).
-      Update pointer position (+= RTC_MEMORY_BLOCK_SIZE)
+      Save new RTC_MEMORY_MEASUREMENT_BLOCK_SIZE blocks of data.
+      Update pointer position (+= RTC_MEMORY_MEASUREMENT_BLOCK_SIZE)
   */
-  uint8_t buffer[RTC_MEMORY_BLOCK_SIZE];
+  uint8_t buffer[RTC_MEMORY_BLOCK_SIZE];  //Memory for pointer_obtained_measurement
   uint8_t pointer_obtained_measurement;
   system_rtc_mem_read(RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK, buffer, RTC_MEMORY_BLOCK_SIZE);  //Read pointer position
+  yield();  //Feeds watchdog.
   pointer_obtained_measurement = buffer[0];
   
-  Serial.printf("pointer_obtained_measurement: %X / ", pointer_obtained_measurement);
+  //Serial.printf("pointer_obtained_measurement: %X / ", pointer_obtained_measurement);
 
-  yield();  //Feeds watchdog.
 
-  system_rtc_mem_write(pointer_obtained_measurement,data,bytes);  //Writes measurements in the position the pointer is indexing.
-  ////////////////////////////////////////////////////////////////////
-  Serial.printf("\nData written to RTC memory:  ");
-  Serial.printf("address: %d / ", pointer_obtained_measurement);
-  Serial.printf("bytes: %d \n", bytes);
-  Serial.printf("data:");
-  for (unsigned short x=0; x < bytes; x++){
-    Serial.printf("%X", ((uint8_t*)(data))[x] );
-  }///////////////////////////////////////////////////////////////////
-  
-  buffer[0] = pointer_obtained_measurement+RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
-  system_rtc_mem_write(RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK,buffer,RTC_MEMORY_BLOCK_SIZE); //Updates the pointer position.
-  Serial.printf("new pointer value: %X / ", (unsigned int)(buffer[0]));
-  
-  return 1;
+  if (pointer_obtained_measurement <= (RTC_MEMORY_MEASUREMENTS_END_BLOCK - RTC_MEMORY_MEASUREMENT_BLOCK_SIZE)) 
+  { //If there is enough space for saving this measurement...
+    system_rtc_mem_write(pointer_obtained_measurement,data,bytes);  //Writes measurements in the position the pointer is indexing.
+    buffer[0] = pointer_obtained_measurement+RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
+    system_rtc_mem_write(RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK,buffer,RTC_MEMORY_BLOCK_SIZE); //Updates the pointer position.
+    Serial.printf("new pointer value: %X / ", (unsigned int)(buffer[0]));
+
+    // ////////////////////////////  DEBUG  //////////////////////////////////
+    // Serial.printf("\nData written to RTC memory:  ");
+    // Serial.printf("address: %d / ", pointer_obtained_measurement);
+    // Serial.printf("bytes: %d \n", bytes);
+    // Serial.printf("data:");
+    // for (unsigned short x=0; x < bytes; x++){
+    //   Serial.printf("%X", ((uint8_t*)(data))[x] );
+    // }   ///////////////////////////////////////////////////////////////////
+    // Serial.print("\n");
+
+    return (1); //Returns 1 to notice that meausrements were correctly saved.
+  }
+  else    //If there is not enough memory to store new measurements...
+  {
+    Serial.print("Not enough RTC memory. ");
+    return (0);  //Returns 0 to notice that measurements were not saved. The code flow should force current temporary measurements
+                //to be saved into flash. 
+                  /*Make a funcion to: Gather all measurements from temporary memory (RTC memory) and saves them to flash measurements.txt file.
+                    Then measurements RAM gets cleared (pointer set to RTC_MEMORY_MEASUREMENTS_START_BLOCK).
+                    After that, the current measurement is stored in the cleared RTC memory.*/
+  }
 }
+
+void clearMeasurementsRAM(void){
+  uint8_t initpos = RTC_MEMORY_MEASUREMENTS_START_BLOCK;
+  int mem_pointer = RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK;
+  system_rtc_mem_write(mem_pointer, &initpos, sizeof(initpos)); //Restarts pointer value.
+
+
+}
+
+bool readDataFromFlash(String path, uint32_t index, void* data, unsigned int bytes){
+
+  File file = SPIFFS.open(path, "r");
+ 
+  if (!file) {
+    Serial.println("Failed to open file for reading");
+    return false;
+  }
+  else{
+    Serial.printf("File Content: from position %d \n", file.position());
+  
+    while (file.available()) {
+      Serial.printf("%X",file.read()); //Prints file content.
+    }
+    file.close();    //Closes file
+    return true;
+  }
+}
+
+bool writeDataToFlash(String path, void* data, unsigned int bytes, char mode) { // send the right file to the client (if it exists)
+  //todo: validate data and bytes parameters. ALso chech if path exists to avoid creating multiple files unnecessarily.
+    
+  //////////////// DEBUG /////////////////
+  uint8_t buffer[bytes+1];
+  for(unsigned int i=0; i < bytes; i++){
+    buffer[i] = ((uint8_t*)data)[i];      //Copies data into a buffer to be displayed.
+  }
+  ////////////////////////////////////////
+
+  File file = SPIFFS.open(path, "a"); //Opens file specified in path parameter to write.
+  if (!file) {    //If file is unable to open...
+    Serial.println("Error opening file for writing");
+    return false;
+  }
+  else{     //If file opened correctly...
+    
+    Serial.printf("\nCursor position at %d",file.seek(0,fs::SeekEnd));     //Put cursor to the end of the file.
+    unsigned int pos = file.position();
+    int bytesWritten = file.write((const char*)data,bytes);
+    // int bytesWritten = file.printf("measurement: %d\n",millis());
+
+    if (bytesWritten > 0) {
+        Serial.printf("\nFile was written in position %d, %d bytes", pos, bytesWritten);
+    } else {
+      Serial.println("\nFile write failed");
+    }
+    file.close();
+  }
+}
+
 
 String generatePOSTRequest( uint16_t id_transceiver, uint8_t battery_level,   //Header elements
                             uint32_t *timestamp,  //Array elements
@@ -318,7 +349,7 @@ String generatePOSTRequest( uint16_t id_transceiver, uint8_t battery_level,   //
 
 
   //request= "t1=1&t2=2&t3=3&t4=4&h1=1&h2=2&h3=3&h4=4";
-      //generateMeasurementValue(TEMPERATURE, temperature[0]);
+      //formatMeasurementValue(TEMPERATURE, temperature[0]);
 
        
       request += "id_transceiver=1";
@@ -330,21 +361,21 @@ String generatePOSTRequest( uint16_t id_transceiver, uint8_t battery_level,   //
       
 
      /*  request+= "t1=";
-      request+= generateMeasurementValue(TEMPERATURE, dht22_sensor_1.readTemperature());
+      request+= formatMeasurementValue(TEMPERATURE, dht22_sensor_1.readTemperature());
       request+= "&t2=";
-      request+= generateMeasurementValue(TEMPERATURE, dht22_sensor_2.readTemperature());
+      request+= formatMeasurementValue(TEMPERATURE, dht22_sensor_2.readTemperature());
       request+= "&t3=";
-      request+= generateMeasurementValue(TEMPERATURE, dht22_sensor_3.readTemperature());
+      request+= formatMeasurementValue(TEMPERATURE, dht22_sensor_3.readTemperature());
       request+= "&t4=";
-      request+= generateMeasurementValue(TEMPERATURE, dht22_sensor_4.readTemperature());
+      request+= formatMeasurementValue(TEMPERATURE, dht22_sensor_4.readTemperature());
       request+= "&h1=";
-      request+= generateMeasurementValue(HUMIDITY, dht22_sensor_1.readHumidity());
+      request+= formatMeasurementValue(HUMIDITY, dht22_sensor_1.readHumidity());
       request+= "&h2=";
-      request+= generateMeasurementValue(HUMIDITY, dht22_sensor_2.readHumidity());
+      request+= formatMeasurementValue(HUMIDITY, dht22_sensor_2.readHumidity());
       request+= "&h3=";
-      request+= generateMeasurementValue(HUMIDITY, dht22_sensor_3.readHumidity());
+      request+= formatMeasurementValue(HUMIDITY, dht22_sensor_3.readHumidity());
       request+= "&h4=";
-      request+= generateMeasurementValue(HUMIDITY, dht22_sensor_4.readHumidity());
+      request+= formatMeasurementValue(HUMIDITY, dht22_sensor_4.readHumidity());
     */
   // temperature_float[0] = dht22_sensor_1.readTemperature();
   // temperature_float[1] = dht22_sensor_2.readTemperature();
@@ -357,7 +388,24 @@ String generatePOSTRequest( uint16_t id_transceiver, uint8_t battery_level,   //
   return request;
 }
 
-String generateMeasurementValue(unsigned char type, float value){  //Converts measurements into valid format
+int32_t generateMeasurementValue(unsigned char type, float value){
+  int32_t measurement; 
+
+  if (type == TEMPERATURE){
+     // -200 ~ 800 -> -20ºC to 80ºC
+     measurement = (int16_t)(value*10);
+  }
+  else if (type == HUMIDITY)
+  { // 0 ~ 100 ->  0% to 100%
+    measurement = (uint8_t)(value);
+  }
+
+  Serial.printf("\n\nMeasurement: %d \n", measurement);
+
+  return(measurement);
+}
+
+String formatMeasurementValue(unsigned char type, float value){  //Converts measurements into valid format
   char measurement [10];  //4B string array for the value.
   measurement[(sizeof(measurement)-1)] = 0; //Put NULL character at the end of the string.
 
@@ -407,18 +455,6 @@ void SetSensorPower(unsigned char state){
   }
 }
 
-void portInit(void){
-  pinMode(PWR_SENSORS_PIN, OUTPUT);   //GPIO12 as output
-  pinMode(14, INPUT);
-  pinMode(15, OUTPUT);
-  pinMode(13, OUTPUT);
-  pinMode(12, OUTPUT);
-  digitalWrite(15,LOW);
-  digitalWrite(13,HIGH);
-  digitalWrite(12,HIGH);
-  SetSensorPower(OFF);          //Sensors start turned off.
-}
-
 /*
     Make funcions to:
         Get last measurements and save them to RTC RAM (non-volatile on boot).
@@ -466,7 +502,6 @@ void wifiTurnOn(void){
   WiFiMulti.addAP("Fibertel WiFi866 2.4GHz", "01416592736");
 }
 
-
 unsigned char runWebServer(void){ 
 
   String ap_ssid="Datalogger";
@@ -476,7 +511,7 @@ unsigned char runWebServer(void){
   //IPAddress gateway(192,168,2,1);   //192.168.2.1
   //IPAddress subnet(255,255,255,0);  //255.255.255.255
   //WiFi.softAPConfig(local_IP, gateway, subnet);
-
+  
   WiFi.mode(WIFI_AP);
   while(!WiFi.softAP(ap_ssid, ap_pssw))
   {
@@ -506,7 +541,6 @@ unsigned char runWebServer(void){
   return(1);
 }
 
-
 void handleHome(void){
   Serial.print("/");
   //Returns main page.
@@ -530,12 +564,60 @@ void handleChangeNetworkConfig(void){
     {
         server.send(200, "text/html", "ERROR: Wrong parameters.");
     }
+
+    // DEBUG: Write arbitrary data to  RTC memory.
+    //Get measurements...
+  measurement m;    
+  m.timestamp=millis(); //Put current timestamp
+  m.id_sensor[0]=1;   
+  m.id_sensor[1]=2; 
+  m.id_sensor[2]=3; 
+  m.id_sensor[3]=4;
+  m.temperature[0]=190; 
+  m.temperature[1]=195;
+  m.temperature[2]=195;
+  m.temperature[3]=192;
+  m.humidity[0]=56; 
+  m.humidity[1]=54; 
+  m.humidity[2]=54; 
+  m.humidity[3]=52;  
+  //Save measurements into temporary memory.
+  if ( ! saveMeasurementsToRAM(&m, sizeof(m))) //If data is not saved correctly in RAM...
+  {
+    Serial.printf("RTC memory full. Saving data to flash and clearing memory...");
+    /* save to flash, clear RAM and then rewrite to it */
+    
+    //////////////////////////////////// Read data from RTC memory and stores in Flash ////////////////
+        uint8 buf[288];   //Temporary buffer to read measurements
+        for (uint8 i = RTC_MEMORY_MEASUREMENTS_START_BLOCK; 
+            i <= RTC_MEMORY_MEASUREMENTS_END_BLOCK-RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
+            i+= RTC_MEMORY_MEASUREMENT_BLOCK_SIZE){
+              readDataRTC(i, &buf, RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4);
+            }
+        writeDataToFlash(MEASUREMENTS_FILE_NAME, buf, sizeof(buf), 0);
+      ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+    clearMeasurementsRAM();
+
+
+
+  }
+
+  readDataFromFlash(MEASUREMENTS_FILE_NAME, 0, 0, 0);
 }
 
 void handleChangeServerConfig(void){
   Serial.print("/change_server_config");
   String new_ip, new_port;
   
+  //  uint8 buf[64];
+  
+  // for (uint8 i = RTC_MEMORY_MEASUREMENTS_START_BLOCK; 
+  //     i <= RTC_MEMORY_MEASUREMENTS_END_BLOCK-RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
+  //     i+= RTC_MEMORY_MEASUREMENT_BLOCK_SIZE){
+  //       readDataRTC(i, &buf, RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4);
+  //     }
+
   if (server.hasArg("ip") && server.hasArg("port"))
   {
       new_ip = server.arg("new_ip");
@@ -557,30 +639,36 @@ unsigned char handleFormatRam(void){
   {
     if(server.arg("command") == "format_confirm"){
       /*Call to format RAM*/
-      rtcMemoryInit();
+      clearMeasurementsRAM();
       Serial.printf("RAM Formatted.");
       server.send(200, "text/plain", "Server parameters modified correctly.");
+
+      //////////////////////////////////// Read data from RTC memory and stores in Flash ////////////////
+        uint8 buf[288];   //Temporary buffer to read measurements
+        for (uint8 i = RTC_MEMORY_MEASUREMENTS_START_BLOCK; 
+            i <= RTC_MEMORY_MEASUREMENTS_END_BLOCK-RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
+            i+= RTC_MEMORY_MEASUREMENT_BLOCK_SIZE){
+              readDataRTC(i, &buf, RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4);
+            }
+        writeDataToFlash(MEASUREMENTS_FILE_NAME, buf, sizeof(buf), 0);
+      ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+      return(1);  //Returns 1 to inform that RAM has been erased correctly. This should drive to a reboot.
     }
   }
-  else{
-      server.send(200, "text/html", "ERROR: Wrong parameters.");
-  } 
-  return(1);  //Returns 1 to inform that RAM has been erased correctly. This should drive to a reboot.
+  server.send(200, "text/html", "ERROR: Wrong parameters.");
+  return(0);  //Returns 1 to inform that RAM has NOT been erased correctly.
 }
 
 unsigned char handleFormatFlash(void){
-  uint8 buf[64];
-  readDataRTC(RTC_MEMORY_MEASUREMENTS_START_BLOCK, &buf, 12);
-  Serial.printf("FLASH Formatted.");
-      server.send(200, "text/html", "<h2>QUIERE BIJA!!!!</h2>");
+  
+  if(SPIFFS.remove(MEASUREMENTS_FILE_NAME)){    //Delete file.
+    SPIFFS.format();
+    Serial.printf("\nFLASH Formatted.\n");
+    return(1);  //Returns 1 to inform that FLASH has been erased correctly. This should drive to a reboot.
+  }
+  else return 0;
 
-  // measurement m;
-  // m.id_sensor= 1;
-  // m.humidity=75;
-  // m.temperature=240;
-  // m.timestamp=1234567890;
-  // saveMeasurementsToRAM(&m, sizeof(m));
-
-  return(1);  //Returns 1 to inform that FLASH has been erased correctly. This should drive to a reboot.
 }
+
 
