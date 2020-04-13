@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-#include <statemachine.h>
+#include <statemachine.hpp>
 
 
 StateMachine::StateMachine(uint8_t initial_state){      //Constuctor
