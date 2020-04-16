@@ -38,6 +38,8 @@ void* stringToArray(std::string origin_string);
 int32_t generateMeasurementValue(unsigned char type, float value);
 String formatMeasurementValue(unsigned char type, float value);  //Converts measurements into valid format
 
+bool writeDataToFlash(String path, void* data, unsigned int bytes);
+bool readDataFromFlash(String path, uint32_t index, void* data, unsigned int bytes);
 // void clearMeasurements(void);
 // unsigned char saveMeasurements(void *data, unsigned short int bytes);
 // void readData(int address, void *data, unsigned short int bytes);
@@ -61,8 +63,11 @@ RtcMemory rtcmem;
 void setup() {
   portInit();
   wifiTurnOff();
+  Serial.begin(115200);
+
 
   delay(200);
+  
   if (digitalRead(14))    //
   {
     digitalWrite(15,HIGH);
@@ -74,19 +79,22 @@ void setup() {
     digitalWrite(15,LOW);
   }
 
-  Serial.begin(115200);
+  SPIFFS.begin();
+  
+  runWebServer();
 
+  handleFormatFlash();  //FOR TESTING ONLY!
+  handleFormatRam();
+
+
+//////////////////////////////////////////////////////////////
+
+/* 
   dht22_sensor_1.begin();           //Initializes objects.
   dht22_sensor_2.begin();
   dht22_sensor_3.begin();
   dht22_sensor_4.begin();
 
-  runWebServer();
-  SPIFFS.begin();
-
-//////////////////////////////////////////////////////////////
-
-/* 
   SetSensorPower(ON);
   delay(1000);
   //GET MEASUREMENTS
@@ -96,6 +104,69 @@ void setup() {
   } 
   SetSensorPower(OFF);
 */
+
+  // DEBUG: Write arbitrary data to  RTC memory.
+      //Get measurements...
+    measurement m;    
+    m.timestamp=1234567890+millis(); //Put current timestamp
+    m.id_sensor[0]=1;   
+    m.id_sensor[1]=2; 
+    m.id_sensor[2]=3; 
+    m.id_sensor[3]=4;
+    m.temperature[0]=190; 
+    m.temperature[1]=195;
+    m.temperature[2]=195;
+    m.temperature[3]=192;
+    m.humidity[0]=56; 
+    m.humidity[1]=54; 
+    m.humidity[2]=54; 
+    m.humidity[3]=52; 
+    
+    //Save measurements into temporary memory.
+    if ( ! rtcmem.saveMeasurements(&m, sizeof(m))) //If data is not saved correctly in RAM...
+    {
+      Serial.printf("RTC memory full. Saving data to flash and clearing memory...");
+      /* save to flash, clear RAM and then rewrite to it */
+      
+      //////////////////////////////////// Read data from RTC memory and stores in Flash ////////////////
+          // uint8 buf[288];   //Temporary buffer to read measurements
+          // for (uint8 i = RTC_MEMORY_MEASUREMENTS_START_BLOCK; 
+          //     i <= RTC_MEMORY_MEASUREMENTS_END_BLOCK-RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
+          //     i+= RTC_MEMORY_MEASUREMENT_BLOCK_SIZE){
+          //       rtcmem.readData(i, &buf, RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4);
+          //     }
+          
+          uint8 buf[288];   //Temporary buffer to read measurements
+          rtcmem.readMeasurements(buf, 12);
+          // rtcmem.readData(RTC_MEMORY_MEASUREMENTS_START_BLOCK, &buf, (RTC_MEMORY_MEASUREMENTS_END_BLOCK - RTC_MEMORY_MEASUREMENTS_START_BLOCK)*4);
+
+         
+          
+      
+
+      //THE PROEBLEM IS HERE:
+      /*
+          the "buf" buffer is sent repeatedly to the method readData, which will return "RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4"
+          bytes of data (currently 24B). So it is overwritting the same first 24B every time, not concatenating
+          the data. What should be done is reading the whole rtcmemory measurement data and copying it to the buffer.
+          Then, send the buffer to save.
+
+          Also, data lenght is not consistant in 24B because some variables are not "ocupying" the full size.
+          See what's up with this. 
+          Data length stored in flash must remain the same as RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4 is (24B) so
+          when read, measurements are separated orderly.
+
+      */
+
+          writeDataToFlash(MEASUREMENTS_FILE_NAME, buf, sizeof(buf));
+        ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+      rtcmem.clearMeasurements();   //Clears rtc memory
+
+      m.timestamp=millis();   //Put actual time for the moment the pending to store measurement is stored.
+      rtcmem.saveMeasurements(&m, sizeof(m));   //Saves current measurement.
+    }
+
   
   
   
@@ -219,15 +290,15 @@ bool readDataFromFlash(String path, uint32_t index, void* data, unsigned int byt
   }
 }
 
-bool writeDataToFlash(String path, void* data, unsigned int bytes, char mode) { // send the right file to the client (if it exists)
+bool writeDataToFlash(String path, void* data, unsigned int bytes) { // send the right file to the client (if it exists)
   //todo: validate data and bytes parameters. ALso chech if path exists to avoid creating multiple files unnecessarily.
-    
-  // //////////////// DEBUG /////////////////
-  // uint8_t buffer[bytes+1];
-  // for(unsigned int i=0; i < bytes; i++){
-  //   buffer[i] = ((uint8_t*)data)[i];      //Copies data into a buffer to be displayed.
-  // }
-  // ////////////////////////////////////////
+  
+  Serial.printf("\n\n Data to write to flash:\n  buf=");
+  for (uint16 i = 0; i < bytes; i++)
+  {
+    Serial.printf("%X", ((const char*)data)[i]);
+  }
+
 
   File file = SPIFFS.open(path, "a"); //Opens file specified in path parameter to write.
   if (!file) {    //If file is unable to open...
@@ -236,17 +307,17 @@ bool writeDataToFlash(String path, void* data, unsigned int bytes, char mode) { 
   }
   else{     //If file opened correctly...
     
-    Serial.printf("\nCursor position at %d",file.seek(0,fs::SeekEnd));     //Put cursor to the end of the file.
-    unsigned int pos = file.position();
+    // Serial.printf("\nCursor position at %d",file.seek(0,fs::SeekEnd));     //Put cursor to the end of the file.
+    unsigned int pos = 0;//file.position();
     int bytesWritten = file.write((const char*)data,bytes);
     // int bytesWritten = file.printf("measurement: %d\n",millis());
-
     if (bytesWritten > 0) {
         Serial.printf("\nFile was written in position %d, %d bytes", pos, bytesWritten);
     } else {
       Serial.println("\nFile write failed");
     }
     file.close();
+    return true;
   }
 }
 
@@ -492,44 +563,7 @@ void handleChangeNetworkConfig(void){
         server.send(200, "text/html", "ERROR: Wrong parameters.");
     }
 
-    // DEBUG: Write arbitrary data to  RTC memory.
-    //Get measurements...
-  measurement m;    
-  m.timestamp=millis(); //Put current timestamp
-  m.id_sensor[0]=1;   
-  m.id_sensor[1]=2; 
-  m.id_sensor[2]=3; 
-  m.id_sensor[3]=4;
-  m.temperature[0]=190; 
-  m.temperature[1]=195;
-  m.temperature[2]=195;
-  m.temperature[3]=192;
-  m.humidity[0]=56; 
-  m.humidity[1]=54; 
-  m.humidity[2]=54; 
-  m.humidity[3]=52;  
-  //Save measurements into temporary memory.
-  if ( ! rtcmem.saveMeasurements(&m, sizeof(m))) //If data is not saved correctly in RAM...
-  {
-    Serial.printf("RTC memory full. Saving data to flash and clearing memory...");
-    /* save to flash, clear RAM and then rewrite to it */
-    
-    //////////////////////////////////// Read data from RTC memory and stores in Flash ////////////////
-        uint8 buf[288];   //Temporary buffer to read measurements
-        for (uint8 i = RTC_MEMORY_MEASUREMENTS_START_BLOCK; 
-            i <= RTC_MEMORY_MEASUREMENTS_END_BLOCK-RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
-            i+= RTC_MEMORY_MEASUREMENT_BLOCK_SIZE){
-              rtcmem.readData(i, &buf, RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4);
-            }
-        writeDataToFlash(MEASUREMENTS_FILE_NAME, buf, sizeof(buf), 0);
-      ///////////////////////////////////////////////////////////////////////////////////////////////////
-
-    rtcmem.clearMeasurements();
-
-
-
-  }
-
+   
   readDataFromFlash(MEASUREMENTS_FILE_NAME, 0, 0, 0);
 }
 
@@ -537,14 +571,6 @@ void handleChangeServerConfig(void){
   Serial.print("/change_server_config");
   String new_ip, new_port;
   
-  //  uint8 buf[64];
-  
-  // for (uint8 i = RTC_MEMORY_MEASUREMENTS_START_BLOCK; 
-  //     i <= RTC_MEMORY_MEASUREMENTS_END_BLOCK-RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
-  //     i+= RTC_MEMORY_MEASUREMENT_BLOCK_SIZE){
-  //       readData(i, &buf, RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4);
-  //     }
-
   if (server.hasArg("ip") && server.hasArg("port"))
   {
       new_ip = server.arg("new_ip");
@@ -570,16 +596,6 @@ unsigned char handleFormatRam(void){
       Serial.printf("RAM Formatted.");
       server.send(200, "text/plain", "Server parameters modified correctly.");
 
-      //////////////////////////////////// Read data from RTC memory and stores in Flash ////////////////
-        uint8 buf[288];   //Temporary buffer to read measurements
-        for (uint8 i = RTC_MEMORY_MEASUREMENTS_START_BLOCK; 
-            i <= RTC_MEMORY_MEASUREMENTS_END_BLOCK-RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
-            i+= RTC_MEMORY_MEASUREMENT_BLOCK_SIZE){
-              rtcmem.readData(i, &buf, RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4);
-            }
-        writeDataToFlash(MEASUREMENTS_FILE_NAME, buf, sizeof(buf), 0);
-      ///////////////////////////////////////////////////////////////////////////////////////////////////
-
       return(1);  //Returns 1 to inform that RAM has been erased correctly. This should drive to a reboot.
     }
   }
@@ -590,7 +606,7 @@ unsigned char handleFormatRam(void){
 unsigned char handleFormatFlash(void){
   
   if(SPIFFS.remove(MEASUREMENTS_FILE_NAME)){    //Delete file.
-    SPIFFS.format();
+    //SPIFFS.format();
     Serial.printf("\nFLASH Formatted.\n");
     return(1);  //Returns 1 to inform that FLASH has been erased correctly. This should drive to a reboot.
   }
