@@ -7,16 +7,15 @@
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
 
+#include <datalogger_config.h>  //Configuration parameters.
+
 #include <Hash.h>
-//#include <ESPAsyncWebServer.h>
-//#include <ESPAsyncTCP.h>
 #include <WebServerFiles.cpp>
 
 #include <FS.h>           //SPIFFS libraries.
 #include <user_interface.h>   //Functions to handle RTC memory.
 #include <rtc_memory.hpp>
 
-#include <datalogger_config.h>  //Configuration parameters.
 
 //----------------------------------------------------------------------------------------
 DHT dht22_sensor_1(DHT_SENSOR_1_PIN, DHTTYPE);    //Creates DHT22 sensor "sensor" object
@@ -125,27 +124,27 @@ void setup() {
     //Save measurements into temporary memory.
     if ( ! rtcmem.saveMeasurements(&m, sizeof(m))) //If data is not saved correctly in RAM...
     {
-      Serial.printf("RTC memory full. Saving data to flash and clearing memory...");
+      Serial.printf(" \n -------- RTC memory full. Saving data to flash and clearing memory... --------");
       /* save to flash, clear RAM and then rewrite to it */
       
-      //////////////////////////////////// Read data from RTC memory and stores in Flash ////////////////
-          // uint8 buf[288];   //Temporary buffer to read measurements
-          // for (uint8 i = RTC_MEMORY_MEASUREMENTS_START_BLOCK; 
-          //     i <= RTC_MEMORY_MEASUREMENTS_END_BLOCK-RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
-          //     i+= RTC_MEMORY_MEASUREMENT_BLOCK_SIZE){
-          //       rtcmem.readData(i, &buf, RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4);
-          //     }
+        //////////////////////////////////// Read data from RTC memory and stores in Flash ////////////////
+      // uint8 buf[288];   //Temporary buffer to read measurements
+      // for (uint8 i = RTC_MEMORY_MEASUREMENTS_START_BLOCK; 
+      //     i <= RTC_MEMORY_MEASUREMENTS_END_BLOCK-RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
+      //     i+= RTC_MEMORY_MEASUREMENT_BLOCK_SIZE){
+      //       rtcmem.readData(i, &buf, RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4);
+      //     }
           
-          uint8 buf[288];   //Temporary buffer to read measurements
-          rtcmem.readMeasurements(buf, 12);
-          // rtcmem.readData(RTC_MEMORY_MEASUREMENTS_START_BLOCK, &buf, (RTC_MEMORY_MEASUREMENTS_END_BLOCK - RTC_MEMORY_MEASUREMENTS_START_BLOCK)*4);
+      uint8 buf[288];   //Temporary buffer to read measurements
+      // rtcmem.readMeasurements(buf, 12);
+      rtcmem.readData(RTC_MEMORY_MEASUREMENTS_START_BLOCK, &buf, (RTC_MEMORY_MEASUREMENTS_END_BLOCK - RTC_MEMORY_MEASUREMENTS_START_BLOCK)*4);
 
          
           
       
 
-      //THE PROEBLEM IS HERE:
-      /*
+        //THE PROEBLEM IS HERE:
+        /*
           the "buf" buffer is sent repeatedly to the method readData, which will return "RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4"
           bytes of data (currently 24B). So it is overwritting the same first 24B every time, not concatenating
           the data. What should be done is reading the whole rtcmemory measurement data and copying it to the buffer.
@@ -155,16 +154,17 @@ void setup() {
           See what's up with this. 
           Data length stored in flash must remain the same as RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4 is (24B) so
           when read, measurements are separated orderly.
+        */
 
-      */
-
-          writeDataToFlash(MEASUREMENTS_FILE_NAME, buf, sizeof(buf));
+      writeDataToFlash(MEASUREMENTS_FILE_NAME, buf, sizeof(buf));
         ///////////////////////////////////////////////////////////////////////////////////////////////////
 
       rtcmem.clearMeasurements();   //Clears rtc memory
 
       m.timestamp=millis();   //Put actual time for the moment the pending to store measurement is stored.
       rtcmem.saveMeasurements(&m, sizeof(m));   //Saves current measurement.
+
+
     }
 
   
@@ -274,18 +274,32 @@ uint8_t getBatteryLevel(void){
 bool readDataFromFlash(String path, uint32_t index, void* data, unsigned int bytes){
 
   File file = SPIFFS.open(path, "r");
- 
+
   if (!file) {
     Serial.println("Failed to open file for reading");
     return false;
   }
   else{
-    Serial.printf("File Content: from position %d \n", file.position());
-  
-    while (file.available()) {
-      Serial.printf("%X",file.read()); //Prints file content.
-    }
-    file.close();    //Closes file
+    file.seek(index, fs::SeekSet);    //Move the cursor "index" bytes from the beginning.
+    uint16 currpos = file.position();
+    Serial.printf("\ncurrpos = %d\n", currpos);
+    for (uint16 i = 0; i < bytes; i++)  //Read "bytes" number of bytes from the index position. 
+    {
+      ((uint8_t*)data)[i] = file.read(); 
+      Serial.printf("%X ",((uint8_t*)data)[i]); //Prints file content.
+    } 
+
+    // while (file.available()) {  //Until the end of the file...
+    //   ///////////////////// debug ///////////////////////////
+    //   Serial.printf("\nFile Content: from position %d: \n", file.position());
+    //   for (uint16 i = index; i < index+bytes; i++)
+    //   {
+    //     ((uint8_t*)data)[i-index] = file.read(); 
+    //     Serial.printf("%X ",((uint8_t*)data)[i-index]); //Prints file content.
+    //   } 
+    //   ///////////////////////////////////////////////////////
+    // }
+    file.close();    //Close file.
     return true;
   }
 }
@@ -296,9 +310,8 @@ bool writeDataToFlash(String path, void* data, unsigned int bytes) { // send the
   Serial.printf("\n\n Data to write to flash:\n  buf=");
   for (uint16 i = 0; i < bytes; i++)
   {
-    Serial.printf("%X", ((const char*)data)[i]);
+    Serial.printf("%X ", ((const char*)data)[i]);
   }
-
 
   File file = SPIFFS.open(path, "a"); //Opens file specified in path parameter to write.
   if (!file) {    //If file is unable to open...
@@ -563,8 +576,22 @@ void handleChangeNetworkConfig(void){
         server.send(200, "text/html", "ERROR: Wrong parameters.");
     }
 
-   
-  readDataFromFlash(MEASUREMENTS_FILE_NAME, 0, 0, 0);
+  uint8_t buf[RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4]; //24 Bytes
+  readDataFromFlash(MEASUREMENTS_FILE_NAME, 0, buf, sizeof(buf));
+
+  measurement m;
+  for (uint16 i = 0; i < 12; i++)
+  {
+    readDataFromFlash(MEASUREMENTS_FILE_NAME, i*RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4, &m, sizeof(buf));
+    
+    Serial.printf("\nRead measurements from flash:   (index: %d)   data: \n",i*RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4);
+    Serial.printf("\ntimestamp: %d\n",m.timestamp);
+    Serial.printf("id_sen sor: [%d,%d,%d,%d] \n",m.id_sensor[0],m.id_sensor[1],m.id_sensor[2],m.id_sensor[3]);
+    Serial.printf("temperature: [%d,%d,%d,%d] \n",m.temperature[0],m.temperature[1],m.temperature[2],m.temperature[3]);
+    Serial.printf("humidity: [%d,%d,%d,%d] \n",m.humidity[0],m.humidity[1],m.humidity[2],m.humidity[3]);
+    Serial.print("----------------------------------\n\n");
+  }
+
 }
 
 void handleChangeServerConfig(void){

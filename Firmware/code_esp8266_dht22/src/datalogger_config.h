@@ -2,6 +2,9 @@
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 
+#ifndef __DATALOGGER_CONFIG_HPP_INCLUDED__
+#define __DATALOGGER_CONFIG_HPP_INCLUDED__
+
 #define DATALOGGER_SENSOR_COUNT         4    //Number of sensors per logger.
 #define DATALOGGER_SENSE_TIME           3600       //Time between measurements, in seconds.
 #define MEASUREMENTS_DAILY_QUANTITY     (86400/DATALOGGER_SENSE_TIME)
@@ -47,7 +50,7 @@
 .       PARAMETER                       VALUE
 -----------------------------------------------------------*/
 #define RTC_MEMORY_SIZE                 768
-#define RTC_MEMORY_START_ADDRESS        256
+#define RTC_MEMORY_START_ADDRESS        256             
 #define RTC_MEMORY_BLOCK_SIZE           4       //Block size in bytes.   
 
 #define RTC_MEMORY_RESERVED_BLOCKS      10      //Blocks not used for measurements.
@@ -55,10 +58,13 @@
 #define RTC_MEMORY_START_BLOCK          ((RTC_MEMORY_START_ADDRESS/RTC_MEMORY_BLOCK_SIZE))                    
 #define RTC_MEMORY_END_BLOCK            (RTC_MEMORY_END_ADDRESS/RTC_MEMORY_BLOCK_SIZE)
 
-#define RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK   RTC_MEMORY_START_BLOCK
 #define RTC_MEMORY_MEASUREMENTS_START_BLOCK     (RTC_MEMORY_START_BLOCK + RTC_MEMORY_RESERVED_BLOCKS)
 #define RTC_MEMORY_MEASUREMENT_BLOCK_SIZE       (sizeof(measurement)/RTC_MEMORY_BLOCK_SIZE)
 #define RTC_MEMORY_MEASUREMENTS_END_BLOCK       (RTC_MEMORY_MEASUREMENTS_START_BLOCK + (12 * RTC_MEMORY_MEASUREMENT_BLOCK_SIZE))
+
+#define RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK   RTC_MEMORY_START_BLOCK
+#define RTC_MEMORY_F_LAST_SAVED_POINTER_BLOCK   (RTC_MEMORY_START_BLOCK + 1)
+#define RTC_MEMORY_F_LAST_SENT_POINTER_BLOCK    (RTC_MEMORY_START_BLOCK + 2)
 
 
 typedef struct{
@@ -69,9 +75,15 @@ typedef struct{
 }measurement;      //structure alias.
 
 typedef struct{   
-        uint16_t pointer_last_sent_measurement;
-        uint16_t pointer_obtained_measurement;        //Block with last saved daily data.
-}rtcMemory;      //structure alias.
+        uint16_t rtcmem_pointer;                //rtcmemory pointer
+        uint16_t flash_last_saved_pointer;      //measurement file last saved packet   
+        uint16_t flash_last_sent_pointer;       //measurement file last sent packet     
+}rtcmemory;      //structure alias.
 /*---------------------------------------------------------*/
 
 #define MEASUREMENTS_FILE_NAME  "measurements.txt"
+#define CONFIG_FILE_NAME        "config.txt"
+
+
+
+#endif  //__DATALOGGER_CONFIG_HPP_INCLUDED__

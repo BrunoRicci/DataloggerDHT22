@@ -1,6 +1,8 @@
 #include <rtc_memory.hpp>
 #include <user_interface.h>   //Functions to handle RTC memory.
 #include <datalogger_config.h> 
+#include <string.h>
+
 
 RtcMemory::RtcMemory(void){ //Constructor
 }
@@ -57,29 +59,34 @@ bool RtcMemory::saveMeasurements(void *data, unsigned short int bytes){
   }
 }
 
-bool RtcMemory::readMeasurements(void *data, unsigned short int amount){
-//  This method reads "amount" number of measurements from rtc memory, format into the
-//correct format (for flash storage) and put them into "data" pointer.
+bool RtcMemory::readMeasurements(uint8_t *data, unsigned short int amount){
+  //  This method reads "amount" number of measurements from rtc memory, format into the
+  //correct format (for flash storage) and put them into "data" pointer.
 
   uint8 buffer[RTC_MEMORY_MEASUREMENT_BLOCK_SIZE * 4]; //24B long buffer.
   measurement m;
   for (uint8 i = RTC_MEMORY_MEASUREMENTS_START_BLOCK; 
-      i <= RTC_MEMORY_MEASUREMENTS_START_BLOCK + amount*RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
+      i < RTC_MEMORY_MEASUREMENTS_START_BLOCK + amount*RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
       i+= RTC_MEMORY_MEASUREMENT_BLOCK_SIZE){
         readData(i, &m, RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4);
 
         arrangeData(m, buffer);   //Copies measurements arranged in the correct format to "buffer".
         
-        arraycpy(data+(sizeof(buffer) * (RTC_MEMORY_MEASUREMENTS_START_BLOCK-i)), buffer, sizeof(buffer));
+        // arraycpy(data+(sizeof(buffer) * (RTC_MEMORY_MEASUREMENTS_START_BLOCK-i)), buffer, sizeof(buffer));
+        memcpy(data+(sizeof(buffer) * (RTC_MEMORY_MEASUREMENTS_START_BLOCK+i)), buffer, sizeof(buffer));
+
+        Serial.printf("\n\nRead measurements:   (block: %d)  [%d bytes]  data: \n",i, RTC_MEMORY_MEASUREMENT_BLOCK_SIZE * 4);
+        for (unsigned short x=0; x < 24; x++){
+          Serial.printf("%X ", ((uint8_t*)(buffer))[x] );
+        }
+        Serial.printf("\ntimestamp: %d\n",m.timestamp);
+        Serial.printf("id_sensor: [%d,%d,%d,%d] \n",m.id_sensor[0],m.id_sensor[1],m.id_sensor[2],m.id_sensor[3]);
+        Serial.printf("temperature: [%d,%d,%d,%d] \n",m.temperature[0],m.temperature[1],m.temperature[2],m.temperature[3]);
+        Serial.printf("humidity: [%d,%d,%d,%d] \n",m.humidity[0],m.humidity[1],m.humidity[2],m.humidity[3]);
   }
 
-  /////////////// DEBUG ////////////////////////
-  Serial.printf("\n --- Read and arranged data:");
-  for (uint16 i = 0; i < sizeof(buffer); i++)
-  {
-    Serial.printf("%X", ((uint8*)data)[i]);
-  }
-  /////////////////////////////////////////////
+
+  return true;
 }
 
 void RtcMemory::readData(int address, void *data, unsigned short int bytes) {
@@ -88,20 +95,17 @@ void RtcMemory::readData(int address, void *data, unsigned short int bytes) {
   /////////////////// DEBUG ///////////////////////////
   // measurement m;
   // system_rtc_mem_read(address, &m, bytes);
-  uint8_t buffer[288];
-  system_rtc_mem_read(address, &buffer, bytes);
-  Serial.printf("\n\nRead measurements:   (block: %d)   data: \n",address);
-   for (unsigned short x=0; x < bytes; x++){
-      Serial.printf("%X", ((uint8_t*)(buffer))[x] );
-    }
-  // Serial.printf("timestamp: %d\n",m.timestamp);
+  // uint8_t buffer[288];
+  // system_rtc_mem_read(address, &buffer, bytes);
+  // Serial.printf("\n\nRead measurements:   (block: %d)   data: \n",address);
+  //  for (unsigned short x=0; x < bytes; x++){
+  //     Serial.printf("%X", ((uint8_t*)(buffer))[x] );
+  //   }
+  // Serial.printf("\ntimestamp: %d\n",m.timestamp);
   // Serial.printf("id_sensor: [%d,%d,%d,%d] \n",m.id_sensor[0],m.id_sensor[1],m.id_sensor[2],m.id_sensor[3]);
   // Serial.printf("temperature: [%d,%d,%d,%d] \n",m.temperature[0],m.temperature[1],m.temperature[2],m.temperature[3]);
   // Serial.printf("humidity: [%d,%d,%d,%d] \n",m.humidity[0],m.humidity[1],m.humidity[2],m.humidity[3]);
   //////////////////////////////////////////////////////
-
-  //Data should be packed in a fixed size of 24B. For some reason there is inconsistancy between
-  //the length of different measurements.
 }
 
 void RtcMemory::init(void){
@@ -109,43 +113,44 @@ void RtcMemory::init(void){
   clearMeasurements();
 }
 
-/*Create method to unallign struct type data.
-  
-*/
-
 bool RtcMemory::arrangeData(measurement m, uint8_t* data){
   /*This method takes a packet of data read from rtc memory, extract all the members values
   inside of it (using the same struct type) and arrange them into a normalized 24B array.*/
 
-/*  typedef struct{
+  /*  typedef struct{
             uint32_t timestamp;                              -> 4B 
             uint16_t id_sensor[DATALOGGER_SENSOR_COUNT];     -> 8B
             int16_t  temperature[DATALOGGER_SENSOR_COUNT];   -> 8B
             uint8_t  humidity[DATALOGGER_SENSOR_COUNT];      -> 4B
     }measurement;      //structure alias.                   -> (24B)
-*/
+  */
 
-  uint8 buffer[RTC_MEMORY_MEASUREMENT_BLOCK_SIZE * 4];  //Buffer 24B long.
+  uint8_t buffer[RTC_MEMORY_MEASUREMENT_BLOCK_SIZE * 4];  //Buffer 24B long.
 
-  arraycpy(buffer,    &m.timestamp,   sizeof(m.timestamp));     //timestamp.
-  arraycpy(buffer+4,  &m.id_sensor,   sizeof(m.id_sensor));     //id_sensor.
-  arraycpy(buffer+12, &m.temperature, sizeof(m.temperature));   //temperature.
-  arraycpy(buffer+20, &m.humidity,    sizeof(m.humidity));      //humidity.
+  memcpy(data,    &m.timestamp, sizeof(m.timestamp));
+  memcpy(data+4,  &m.timestamp, sizeof(m.id_sensor));
+  memcpy(data+12, &m.timestamp, sizeof(m.temperature));
+  memcpy(data+20, &m.timestamp, sizeof(m.humidity));
+  
+  memcpy(buffer,    &m.timestamp, sizeof(m.timestamp));
+  memcpy(buffer+4,  &m.timestamp, sizeof(m.id_sensor));
+  memcpy(buffer+12, &m.timestamp, sizeof(m.temperature));
+  memcpy(buffer+20, &m.timestamp, sizeof(m.humidity));
 
   /////////////// DEBUG ////////////////////////
-  Serial.printf("\n Arranged data:");
+  Serial.printf("\nArranged data: %d bytes  ", sizeof(buffer));
   for (uint16 i = 0; i < sizeof(buffer); i++)
   {
-    Serial.printf("%X", buffer[i]);
+    Serial.printf("%X ", data[i]);
   }
   /////////////////////////////////////////////
-
-
-
+  return true;
 }
 
-void arraycpy(uint8_t* result, uint8_t* origin, uint16_t len){
+void arraycpy(unsigned char* result, unsigned char* origin, unsigned short len){
   for(uint16 i=0; i<len; i++){
     *(result + i) = *(origin + i);
   }
 }
+
+//Make structs for pointers
