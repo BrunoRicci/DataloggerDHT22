@@ -74,15 +74,12 @@ typedef struct{
         uint8_t  humidity[DATALOGGER_SENSOR_COUNT];      //humidity
 }measurement;      //structure alias.
 
-typedef struct{   
-        uint16_t rtcmem_pointer;                //rtcmemory pointer
-        uint16_t flash_last_saved_pointer;      //measurement file last saved packet   
-        uint16_t flash_last_sent_pointer;       //measurement file last sent packet     
-}rtcmemory;      //structure alias.
+
 /*---------------------------------------------------------*/
 
 #define MEASUREMENTS_FILE_NAME  "measurements.txt"
 #define CONFIG_FILE_NAME        "config.txt"
+//todo: MAKE DEFINE FOR MAXIMUM NUMBER OF PACKETS PER ARCHIVE READ AND WRITE OPERATION.
 
 
 

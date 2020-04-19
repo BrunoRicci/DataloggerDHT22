@@ -125,32 +125,25 @@ bool RtcMemory::arrangeData(measurement m, uint8_t* data){
     }measurement;      //structure alias.                   -> (24B)
   */
 
-  uint8_t buffer[RTC_MEMORY_MEASUREMENT_BLOCK_SIZE * 4];  //Buffer 24B long.
-
   memcpy(data,    &m.timestamp, sizeof(m.timestamp));
   memcpy(data+4,  &m.timestamp, sizeof(m.id_sensor));
   memcpy(data+12, &m.timestamp, sizeof(m.temperature));
   memcpy(data+20, &m.timestamp, sizeof(m.humidity));
-  
-  memcpy(buffer,    &m.timestamp, sizeof(m.timestamp));
-  memcpy(buffer+4,  &m.timestamp, sizeof(m.id_sensor));
-  memcpy(buffer+12, &m.timestamp, sizeof(m.temperature));
-  memcpy(buffer+20, &m.timestamp, sizeof(m.humidity));
 
-  /////////////// DEBUG ////////////////////////
-  Serial.printf("\nArranged data: %d bytes  ", sizeof(buffer));
-  for (uint16 i = 0; i < sizeof(buffer); i++)
-  {
-    Serial.printf("%X ", data[i]);
-  }
-  /////////////////////////////////////////////
+  // /////////////// DEBUG ////////////////////////
+  // uint8_t buffer[RTC_MEMORY_MEASUREMENT_BLOCK_SIZE * 4];  //Buffer 24B long.    
+  // memcpy(buffer,    &m.timestamp, sizeof(m.timestamp));
+  // memcpy(buffer+4,  &m.timestamp, sizeof(m.id_sensor));
+  // memcpy(buffer+12, &m.timestamp, sizeof(m.temperature));
+  // memcpy(buffer+20, &m.timestamp, sizeof(m.humidity));
+
+  // Serial.printf("\nArranged data: %d bytes  ", sizeof(buffer));
+  // for (uint16 i = 0; i < sizeof(buffer); i++)
+  // {
+  //   Serial.printf("%X ", data[i]);
+  // }
+  // /////////////////////////////////////////////
   return true;
-}
-
-void arraycpy(unsigned char* result, unsigned char* origin, unsigned short len){
-  for(uint16 i=0; i<len; i++){
-    *(result + i) = *(origin + i);
-  }
 }
 
 //Make structs for pointers

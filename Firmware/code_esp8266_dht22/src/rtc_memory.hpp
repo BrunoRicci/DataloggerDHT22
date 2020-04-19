@@ -16,4 +16,11 @@ class RtcMemory{
     private:
         void arraycpy(unsigned char* result, unsigned char* origin, unsigned short len);
         bool arrangeData(measurement m, uint8_t* data);
+
+
+        typedef struct{   
+        uint16_t rtcmem_pointer;                //rtcmemory pointer
+        uint16_t archive_saved_pointer;      //measurement file last saved packet   
+        uint16_t archive_sent_pointer;       //measurement file last sent packet     
+        }variables;      //structure alias.
 };

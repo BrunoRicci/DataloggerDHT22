@@ -39,11 +39,9 @@ String formatMeasurementValue(unsigned char type, float value);  //Converts meas
 
 bool writeDataToFlash(String path, void* data, unsigned int bytes);
 bool readDataFromFlash(String path, uint32_t index, void* data, unsigned int bytes);
-// void clearMeasurements(void);
-// unsigned char saveMeasurements(void *data, unsigned short int bytes);
-// void readData(int address, void *data, unsigned short int bytes);
-// void init(void);
-
+bool archiveWrite(void* data, uint16_t bytes);
+bool archiveRead(uint32_t start_index, uint32_t end_index);
+uint32_t archiveGetPointer(void);
 //Functions to handle 
 void handleHome(void);
 void handleChangeNetworkConfig(void);
@@ -127,43 +125,16 @@ void setup() {
       Serial.printf(" \n -------- RTC memory full. Saving data to flash and clearing memory... --------");
       /* save to flash, clear RAM and then rewrite to it */
       
-        //////////////////////////////////// Read data from RTC memory and stores in Flash ////////////////
-      // uint8 buf[288];   //Temporary buffer to read measurements
-      // for (uint8 i = RTC_MEMORY_MEASUREMENTS_START_BLOCK; 
-      //     i <= RTC_MEMORY_MEASUREMENTS_END_BLOCK-RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
-      //     i+= RTC_MEMORY_MEASUREMENT_BLOCK_SIZE){
-      //       rtcmem.readData(i, &buf, RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4);
-      //     }
-          
-      uint8 buf[288];   //Temporary buffer to read measurements
-      // rtcmem.readMeasurements(buf, 12);
+      uint8 buf[(RTC_MEMORY_MEASUREMENTS_END_BLOCK - RTC_MEMORY_MEASUREMENTS_START_BLOCK)*4];   //Temporary buffer to read measurements
       rtcmem.readData(RTC_MEMORY_MEASUREMENTS_START_BLOCK, &buf, (RTC_MEMORY_MEASUREMENTS_END_BLOCK - RTC_MEMORY_MEASUREMENTS_START_BLOCK)*4);
 
-         
-          
-      
-
-        //THE PROEBLEM IS HERE:
-        /*
-          the "buf" buffer is sent repeatedly to the method readData, which will return "RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4"
-          bytes of data (currently 24B). So it is overwritting the same first 24B every time, not concatenating
-          the data. What should be done is reading the whole rtcmemory measurement data and copying it to the buffer.
-          Then, send the buffer to save.
-
-          Also, data lenght is not consistant in 24B because some variables are not "ocupying" the full size.
-          See what's up with this. 
-          Data length stored in flash must remain the same as RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4 is (24B) so
-          when read, measurements are separated orderly.
-        */
-
-      writeDataToFlash(MEASUREMENTS_FILE_NAME, buf, sizeof(buf));
-        ///////////////////////////////////////////////////////////////////////////////////////////////////
-
-      rtcmem.clearMeasurements();   //Clears rtc memory
+      // writeDataToFlash(MEASUREMENTS_FILE_NAME, buf, sizeof(buf)); //Save measurements to flash.
+      archiveWrite(buf, sizeof(buf));
+      rtcmem.clearMeasurements();   //Clears rtc memory.
 
       m.timestamp=millis();   //Put actual time for the moment the pending to store measurement is stored.
       rtcmem.saveMeasurements(&m, sizeof(m));   //Saves current measurement.
-
+  
 
     }
 
@@ -271,39 +242,6 @@ uint8_t getBatteryLevel(void){
 }
 
 
-bool readDataFromFlash(String path, uint32_t index, void* data, unsigned int bytes){
-
-  File file = SPIFFS.open(path, "r");
-
-  if (!file) {
-    Serial.println("Failed to open file for reading");
-    return false;
-  }
-  else{
-    file.seek(index, fs::SeekSet);    //Move the cursor "index" bytes from the beginning.
-    uint16 currpos = file.position();
-    Serial.printf("\ncurrpos = %d\n", currpos);
-    for (uint16 i = 0; i < bytes; i++)  //Read "bytes" number of bytes from the index position. 
-    {
-      ((uint8_t*)data)[i] = file.read(); 
-      Serial.printf("%X ",((uint8_t*)data)[i]); //Prints file content.
-    } 
-
-    // while (file.available()) {  //Until the end of the file...
-    //   ///////////////////// debug ///////////////////////////
-    //   Serial.printf("\nFile Content: from position %d: \n", file.position());
-    //   for (uint16 i = index; i < index+bytes; i++)
-    //   {
-    //     ((uint8_t*)data)[i-index] = file.read(); 
-    //     Serial.printf("%X ",((uint8_t*)data)[i-index]); //Prints file content.
-    //   } 
-    //   ///////////////////////////////////////////////////////
-    // }
-    file.close();    //Close file.
-    return true;
-  }
-}
-
 bool writeDataToFlash(String path, void* data, unsigned int bytes) { // send the right file to the client (if it exists)
   //todo: validate data and bytes parameters. ALso chech if path exists to avoid creating multiple files unnecessarily.
   
@@ -334,6 +272,114 @@ bool writeDataToFlash(String path, void* data, unsigned int bytes) { // send the
   }
 }
 
+bool readDataFromFlash(String path, uint32_t index, void* data, unsigned int bytes){
+
+  File file = SPIFFS.open(path, "r");   //Open file
+
+  if (!file) {
+    Serial.println("Failed to open file for reading");
+    return false;
+  }
+  else{
+    file.seek(index, fs::SeekSet);    //Move the cursor "index" bytes from the beginning.
+    uint16 currpos = file.position();
+    Serial.printf("\ncurrpos = %d\n", currpos);
+    for (uint16 i = 0; i < bytes; i++)  //Read "bytes" number of bytes from the index position. 
+    {
+      ((uint8_t*)data)[i] = file.read(); 
+      Serial.printf("%X ",((uint8_t*)data)[i]); //Prints file content.
+    } 
+
+    file.close();    //Close file.
+    return true;
+  }
+}
+
+bool archiveWrite(void* data, uint16_t bytes){
+  //Write "bytes" number of packets into the archive (flash memory).
+  if(bytes >= RTC_MEMORY_MEASUREMENT_BLOCK_SIZE){
+    
+    Serial.printf("\n\n Data to write to archive:\n  buf=");
+    for (uint16 i = 0; i < bytes; i++)
+    {
+      Serial.printf("%X ", ((const char*)data)[i]);
+    }
+
+    File file = SPIFFS.open(MEASUREMENTS_FILE_NAME, "a"); //Opens archive file to append measurements.
+      // file.size();
+    if (file) {    //If file opened correctly...
+      
+      int bytesWritten = file.write((const char*)data,bytes);
+
+      if (bytesWritten > 0) {
+          Serial.printf("\nFile was written, %d bytes",bytesWritten);
+      } else {
+        Serial.println("\nFile write failed");
+      }
+      file.close();
+      return true;
+    }
+    else{        //If file is unable to open...
+      Serial.println("Error opening file for writing");
+      
+    }
+  }
+  return false;
+}
+
+bool archiveRead(void* data, uint32_t first_packet, uint32_t last_packet){
+  //Read archive from one packet index to other. "start index" is the first reference and "end_index" the last one.
+  //This function will copy the content from the first packet in the archive to the last one, including both
+  //mentioned packets and each one between them, in the order they are saved into the archive.
+  //If both indexes are equal, only one packet is read.
+    
+  //Validate that the index values are both multiple of RTC_MEMORY_MEASUREMENT_BLOCK_SIZE (24)!!
+  
+  uint32_t packet_amount = 1+(last_packet-first_packet);
+  uint32_t total_bytes = packet_amount*RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*RTC_MEMORY_BLOCK_SIZE;
+  if ( first_packet >= 0 && last_packet >= 0 && (packet_amount >= 0))  //If packets indexes are valid...
+  {
+    File file = SPIFFS.open(MEASUREMENTS_FILE_NAME, "r");   //Open file
+    if (file){        //If file opens correctly...
+      //If file end is not going to be reached...
+      if( file.available() >= total_bytes )  
+      { 
+          file.seek(first_packet*RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*RTC_MEMORY_BLOCK_SIZE,
+                    fs::SeekSet);    //Move the cursor to the first packet position.
+
+          Serial.printf("\nData read from archive:   (currpos = %d)\n", file.position());   //For debugging...
+          
+          for (uint32 i = 0; i < total_bytes; i++)    //Writes data output buffer
+          {
+            ((uint8_t*)data)[i] = file.read(); 
+            Serial.printf("%X ",((uint8_t*)data)[i]); //Prints file content.                //For debugging...  
+          }
+      }
+      file.close();    //Close file.
+      return true;
+    }
+    else{         //If file fails to open...
+      Serial.println("Failed to open file for reading");
+      return false;
+    }
+  }
+  else
+  {
+    return false;
+  }
+}
+
+uint32_t archiveGetPointer(void){
+  //Return position of pointer, where next packet will be written.
+  uint32_t size = 0;
+  File file = SPIFFS.open(MEASUREMENTS_FILE_NAME, "r");   //Open file
+    if (file){        //If file opens correctly...
+      size = file.size();
+      Serial.printf("\nFile size = %d)\n", size);   //For debugging...
+      file.close();    //Close file.
+    }
+  return (1+size/(RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*RTC_MEMORY_BLOCK_SIZE));   
+}
 
 String generatePOSTRequest( uint16_t id_transceiver, uint8_t battery_level,   //Header elements
                             uint32_t *timestamp,  //Array elements
@@ -466,38 +512,6 @@ void SetSensorPower(unsigned char state){
   }
 }
 
-/*
-    Make funcions to:
-        Get last measurements and save them to RTC RAM (non-volatile on boot).
-        Get gathered data packets (temperature and humidity) from RTC RAM and save them to FLASH (SPIFFS).
-        Update/increment measurements counter in RTC RAM (not to count each measurement taken from the file).
-    -----------------------------------------
-        Initialize RTC memory and FLASH memory.
-        Program must boot and call this function. If device 
-
-
-
-    -----------------------------------------
-        Get pending data packets from FLASH memory. Pending packets are determined by the difference between 
-      the measurements_counter and the last_sent_measurement index.
-        Transform them into human-legible format (i.e. -135 -> -
-      º  13,5ºC  or 45 -> 45% RH and so).
-        Generate POST request with every value to be sent:
-          id_transceiver, battery_level, id_sensor[], timestamp[], temperature[], humidity[].
-          In case the quantity of packets to be transmitted would exceed the maximum supported (see 
-          datalogger_config.h), only a bunch of them is loaded, and the following will be sent in a separate 
-          request following this one.
-          After each packet is correctly sent, the last_sent_measurement index is updated so in the next
-          request the device will send only the not sent ones.
-    -----------------------------------------  
-      Get date and time from server. When connected to it, once packets are sent, a request for 
-        date and time is generated
-    -----------------------------------------
-        Manage times: 
-          From the time the device goes deep-sleep mode (sent to the funcion goDeepSleep) to the time it actually
-          boots and takes measurements, connect and send the packets, there is a lapse which must be tracked or 
-          taken into account. Function millis() can be used to that.
-*/
 
 void wifiTurnOff(void){
   WiFi.mode( WIFI_OFF );  //Wifi starts turned off after wake up, in order to save energy.
@@ -580,10 +594,11 @@ void handleChangeNetworkConfig(void){
   readDataFromFlash(MEASUREMENTS_FILE_NAME, 0, buf, sizeof(buf));
 
   measurement m;
+  
   for (uint16 i = 0; i < 12; i++)
   {
-    readDataFromFlash(MEASUREMENTS_FILE_NAME, i*RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4, &m, sizeof(buf));
-    
+    // readDataFromFlash(MEASUREMENTS_FILE_NAME, i*RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4, &m, sizeof(buf));
+    archiveRead(&m, i, i);
     Serial.printf("\nRead measurements from flash:   (index: %d)   data: \n",i*RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4);
     Serial.printf("\ntimestamp: %d\n",m.timestamp);
     Serial.printf("id_sen sor: [%d,%d,%d,%d] \n",m.id_sensor[0],m.id_sensor[1],m.id_sensor[2],m.id_sensor[3]);
@@ -591,6 +606,7 @@ void handleChangeNetworkConfig(void){
     Serial.printf("humidity: [%d,%d,%d,%d] \n",m.humidity[0],m.humidity[1],m.humidity[2],m.humidity[3]);
     Serial.print("----------------------------------\n\n");
   }
+
 
 }
 
@@ -642,3 +658,35 @@ unsigned char handleFormatFlash(void){
 }
 
 
+/*
+    Make funcions to:
+        Get last measurements and save them to RTC RAM (non-volatile on boot).
+        Get gathered data packets (temperature and humidity) from RTC RAM and save them to FLASH (SPIFFS).
+        Update/increment measurements counter in RTC RAM (not to count each measurement taken from the file).
+    -----------------------------------------
+        Initialize RTC memory and FLASH memory.
+        Program must boot and call this function. If device 
+
+
+
+    -----------------------------------------
+        Get pending data packets from FLASH memory. Pending packets are determined by the difference between 
+      the measurements_counter and the last_sent_measurement index.
+        Transform them into human-legible format (i.e. -135 -> -
+      º  13,5ºC  or 45 -> 45% RH and so).
+        Generate POST request with every value to be sent:
+          id_transceiver, battery_level, id_sensor[], timestamp[], temperature[], humidity[].
+          In case the quantity of packets to be transmitted would exceed the maximum supported (see 
+          datalogger_config.h), only a bunch of them is loaded, and the following will be sent in a separate 
+          request following this one.
+          After each packet is correctly sent, the last_sent_measurement index is updated so in the next
+          request the device will send only the not sent ones.
+    -----------------------------------------  
+      Get date and time from server. When connected to it, once packets are sent, a request for 
+        date and time is generated
+    -----------------------------------------
+        Manage times: 
+          From the time the device goes deep-sleep mode (sent to the funcion goDeepSleep) to the time it actually
+          boots and takes measurements, connect and send the packets, there is a lapse which must be tracked or 
+          taken into account. Function millis() can be used to that.
+*/
