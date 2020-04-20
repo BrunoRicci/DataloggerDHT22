@@ -65,24 +65,14 @@ void setup() {
 
   delay(200);
   
-  if (digitalRead(14))    //
-  {
-    digitalWrite(15,HIGH);
-    getBatteryLevel();
-   
-  }
-  else
-  {
-    digitalWrite(15,LOW);
-  }
-
-  SPIFFS.begin();
   
-  runWebServer();
 
-  handleFormatFlash();  //FOR TESTING ONLY!
-  handleFormatRam();
+  // SPIFFS.begin();
+  
+  // runWebServer();
 
+  // handleFormatFlash();  //FOR TESTING ONLY!
+  // handleFormatRam();
 
 //////////////////////////////////////////////////////////////
 
@@ -102,41 +92,62 @@ void setup() {
   SetSensorPower(OFF);
 */
 
-  // DEBUG: Write arbitrary data to  RTC memory.
-      //Get measurements...
-    measurement m;    
-    m.timestamp=1234567890+millis(); //Put current timestamp
-    m.id_sensor[0]=1;   
-    m.id_sensor[1]=2; 
-    m.id_sensor[2]=3; 
-    m.id_sensor[3]=4;
-    m.temperature[0]=190; 
-    m.temperature[1]=195;
-    m.temperature[2]=195;
-    m.temperature[3]=192;
-    m.humidity[0]=56; 
-    m.humidity[1]=54; 
-    m.humidity[2]=54; 
-    m.humidity[3]=52; 
+    Serial.printf("\n\n time: %d", rtcmem.getCurrentTime());
+    delay(1000);
     
-    //Save measurements into temporary memory.
-    if ( ! rtcmem.saveMeasurements(&m, sizeof(m))) //If data is not saved correctly in RAM...
+
+    if (digitalRead(14))    //
     {
-      Serial.printf(" \n -------- RTC memory full. Saving data to flash and clearing memory... --------");
-      /* save to flash, clear RAM and then rewrite to it */
-      
-      uint8 buf[(RTC_MEMORY_MEASUREMENTS_END_BLOCK - RTC_MEMORY_MEASUREMENTS_START_BLOCK)*4];   //Temporary buffer to read measurements
-      rtcmem.readData(RTC_MEMORY_MEASUREMENTS_START_BLOCK, &buf, (RTC_MEMORY_MEASUREMENTS_END_BLOCK - RTC_MEMORY_MEASUREMENTS_START_BLOCK)*4);
-
-      // writeDataToFlash(MEASUREMENTS_FILE_NAME, buf, sizeof(buf)); //Save measurements to flash.
-      archiveWrite(buf, sizeof(buf));
-      rtcmem.clearMeasurements();   //Clears rtc memory.
-
-      m.timestamp=millis();   //Put actual time for the moment the pending to store measurement is stored.
-      rtcmem.saveMeasurements(&m, sizeof(m));   //Saves current measurement.
-  
-
+      digitalWrite(15,HIGH);
+      getBatteryLevel();
+      rtcmem.safeDisconnect();
     }
+    else
+    {
+      digitalWrite(15,LOW);
+      rtcmem.recoverVariables();
+    }
+
+
+
+    goDeepSleep(5e6);
+
+
+
+  // // DEBUG: Write arbitrary data to  RTC memory.
+  //     //Get measurements...
+  //   Measurement m;    
+  //   m.timestamp=1234567890+millis(); //Put current timestamp
+  //   m.id_sensor[0]=1;   
+  //   m.id_sensor[1]=2; 
+  //   m.id_sensor[2]=3; 
+  //   m.id_sensor[3]=4;
+  //   m.temperature[0]=190; 
+  //   m.temperature[1]=195;
+  //   m.temperature[2]=195;
+  //   m.temperature[3]=192;
+  //   m.humidity[0]=56; 
+  //   m.humidity[1]=54; 
+  //   m.humidity[2]=54; 
+  //   m.humidity[3]=52; 
+    
+  //   //Save measurements into temporary memory.
+  //   if ( ! rtcmem.saveMeasurements(&m, sizeof(m))) //If data is not saved correctly in RAM...
+  //   {
+  //     Serial.printf(" \n -------- RTC memory full. Saving data to flash and clearing memory... --------");
+  //     /* save to flash, clear RAM and then rewrite to it */
+      
+  //     uint8 buf[(RTC_MEMORY_MEASUREMENTS_END_BLOCK - RTC_MEMORY_MEASUREMENTS_START_BLOCK)*4];   //Temporary buffer to read measurements
+  //     rtcmem.readData(RTC_MEMORY_MEASUREMENTS_START_BLOCK, &buf, (RTC_MEMORY_MEASUREMENTS_END_BLOCK - RTC_MEMORY_MEASUREMENTS_START_BLOCK)*4);
+
+  //     // writeDataToFlash(MEASUREMENTS_FILE_NAME, buf, sizeof(buf)); //Save measurements to flash.
+  //     archiveWrite(buf, sizeof(buf));
+  //     rtcmem.clearMeasurements();   //Clears rtc memory.
+
+  //     m.timestamp=millis();   //Put actual time for the moment the pending to store measurement is stored.
+  //     rtcmem.saveMeasurements(&m, sizeof(m));   //Saves current measurement.
+  
+  //   }
 
   
   
@@ -189,27 +200,6 @@ void loop() {
     }
   } 
 */
-
-/* 
-  measurement m;
-  m.timestamp=1234567890; //Put current timestamp
-  m.id_sensor[0]=1;   
-  m.id_sensor[1]=2; 
-  m.id_sensor[2]=3; 
-  m.id_sensor[3]=4;
-  m.temperature[0]=generateMeasurementValue(TEMPERATURE, dht22_sensor_1.readTemperature()); 
-  m.temperature[1]=generateMeasurementValue(TEMPERATURE, dht22_sensor_2.readTemperature());
-  m.temperature[2]=generateMeasurementValue(TEMPERATURE, dht22_sensor_3.readTemperature());
-  m.temperature[3]=generateMeasurementValue(TEMPERATURE, dht22_sensor_4.readTemperature());
-  m.humidity[0]=generateMeasurementValue(HUMIDITY, dht22_sensor_1.readHumidity()); 
-  m.humidity[1]=generateMeasurementValue(HUMIDITY, dht22_sensor_2.readHumidity()); 
-  m.humidity[2]=generateMeasurementValue(HUMIDITY, dht22_sensor_3.readHumidity()); 
-  m.humidity[3]=generateMeasurementValue(HUMIDITY, dht22_sensor_4.readHumidity());  
-  saveMeasurements(&m, sizeof(m)); 
-*/
-  
-
- 
   
 
 
@@ -375,8 +365,8 @@ uint32_t archiveGetPointer(void){
   File file = SPIFFS.open(MEASUREMENTS_FILE_NAME, "r");   //Open file
     if (file){        //If file opens correctly...
       size = file.size();
-      Serial.printf("\nFile size = %d)\n", size);   //For debugging...
       file.close();    //Close file.
+      // Serial.printf("\nFile size = %d)\n", size);   //For debugging...
     }
   return (1+size/(RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*RTC_MEMORY_BLOCK_SIZE));   
 }
@@ -493,9 +483,11 @@ void* stringToArray(std::string origin_string){
 }
 
 void goDeepSleep(uint64_t time){
+  uint32_t t = time/1000000;
   WiFi.disconnect(true);  //Turns off wifi module, so in the wake up it won't turn on automatically until required.
   delay(1);
-  Serial.printf("\nGoing deep sleep...  rtc_time=%d", system_get_rtc_time());
+  Serial.printf("\nGoing deep sleep for %d seconds... ", (t));
+  rtcmem.setElapsedTime(t+(millis()/1000));
   ESP.deepSleep(time, WAKE_RF_DISABLED);  //deep sleeps for 5 seconds...
 }
 
@@ -593,8 +585,7 @@ void handleChangeNetworkConfig(void){
   uint8_t buf[RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4]; //24 Bytes
   readDataFromFlash(MEASUREMENTS_FILE_NAME, 0, buf, sizeof(buf));
 
-  measurement m;
-  
+  Measurement m;  
   for (uint16 i = 0; i < 12; i++)
   {
     // readDataFromFlash(MEASUREMENTS_FILE_NAME, i*RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4, &m, sizeof(buf));
@@ -606,7 +597,8 @@ void handleChangeNetworkConfig(void){
     Serial.printf("humidity: [%d,%d,%d,%d] \n",m.humidity[0],m.humidity[1],m.humidity[2],m.humidity[3]);
     Serial.print("----------------------------------\n\n");
   }
-
+ 
+  Serial.printf("\nArchive pointer: %d", archiveGetPointer());
 
 }
 

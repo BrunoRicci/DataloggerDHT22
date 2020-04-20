@@ -2,9 +2,11 @@
 #include <user_interface.h>   //Functions to handle RTC memory.
 #include <datalogger_config.h> 
 #include <string.h>
+#include <FS.h>
 
 
 RtcMemory::RtcMemory(void){ //Constructor
+  // var.rtcmem_pointer = getPointer();
 }
 
 void RtcMemory::clearMeasurements(void){
@@ -64,7 +66,7 @@ bool RtcMemory::readMeasurements(uint8_t *data, unsigned short int amount){
   //correct format (for flash storage) and put them into "data" pointer.
 
   uint8 buffer[RTC_MEMORY_MEASUREMENT_BLOCK_SIZE * 4]; //24B long buffer.
-  measurement m;
+  Measurement m;
   for (uint8 i = RTC_MEMORY_MEASUREMENTS_START_BLOCK; 
       i < RTC_MEMORY_MEASUREMENTS_START_BLOCK + amount*RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
       i+= RTC_MEMORY_MEASUREMENT_BLOCK_SIZE){
@@ -93,7 +95,7 @@ void RtcMemory::readData(int address, void *data, unsigned short int bytes) {
   system_rtc_mem_read(address, data, bytes);
   yield();
   /////////////////// DEBUG ///////////////////////////
-  // measurement m;
+  // Measurement m;
   // system_rtc_mem_read(address, &m, bytes);
   // uint8_t buffer[288];
   // system_rtc_mem_read(address, &buffer, bytes);
@@ -108,12 +110,24 @@ void RtcMemory::readData(int address, void *data, unsigned short int bytes) {
   //////////////////////////////////////////////////////
 }
 
-void RtcMemory::init(void){
-  //Initializes rtm memory. Clears all pointers.
-  clearMeasurements();
+void RtcMemory::writeData(int address, void* data, uint16_t bytes){
+  //Writes data into rtc memory.
+  system_rtc_mem_write(address, data, bytes);
 }
 
-bool RtcMemory::arrangeData(measurement m, uint8_t* data){
+uint8_t getPointer(void){
+  uint8_t buf[RTC_MEMORY_BLOCK_SIZE];
+  system_rtc_mem_read(RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK, buf, RTC_MEMORY_BLOCK_SIZE);  //Read pointer position
+  return(buf[0]);
+}
+
+void RtcMemory::clear(void){
+  //Initializes rtm memory. Clears all pointers.
+  clearMeasurements();
+  
+}
+
+bool RtcMemory::arrangeData(Measurement m, uint8_t* data){
   /*This method takes a packet of data read from rtc memory, extract all the members values
   inside of it (using the same struct type) and arrange them into a normalized 24B array.*/
 
@@ -122,7 +136,7 @@ bool RtcMemory::arrangeData(measurement m, uint8_t* data){
             uint16_t id_sensor[DATALOGGER_SENSOR_COUNT];     -> 8B
             int16_t  temperature[DATALOGGER_SENSOR_COUNT];   -> 8B
             uint8_t  humidity[DATALOGGER_SENSOR_COUNT];      -> 4B
-    }measurement;      //structure alias.                   -> (24B)
+    }Measurement;      //structure alias.                   -> (24B)
   */
 
   memcpy(data,    &m.timestamp, sizeof(m.timestamp));
@@ -146,4 +160,52 @@ bool RtcMemory::arrangeData(measurement m, uint8_t* data){
   return true;
 }
 
-//Make structs for pointers
+//Read and write variables from object (RAM) to rtc memory in each operation!!!!!!
+void RtcMemory::setElapsedTime(uint32_t time){
+  var.current_time += time;   //Modifies actual value adding up the elapsed time.
+  writeData(RTC_MEMORY_VARIABLES_START_BLOCK, &var, sizeof(Variables));
+}
+
+uint32_t RtcMemory::getCurrentTime(void){
+  //Returns the time calculated when the last deep sleep happened and adds up the elapsed since then.
+  readData(RTC_MEMORY_VARIABLES_START_BLOCK, &var, sizeof(Variables));
+  return ((var.current_time)+(millis()/1000));
+}
+
+bool RtcMemory::safeDisconnect(void){
+  //Saves current values for "var" (Variables struct type) into non-volatile memory.
+  //File -> NVM_POINTERS_FILE_NAME
+  void* p = &var;
+
+  File file = SPIFFS.open(NVM_POINTERS_FILE_NAME, "w");
+  if (file) {       //If file opened correctly...
+      int bytesWritten = file.write((const char*)(p), sizeof(Variables)); //Overwrites previous data.
+      file.close();
+      return true;
+  }
+
+  return false;
+}
+
+bool RtcMemory::recoverVariables(void){
+  //Recovers last saved data from flash and loads it to the "var" object variable.
+
+  void* p = &var;
+  uint8_t buf[sizeof(Variables)]; //temporary buffer.
+
+  File file = SPIFFS.open(NVM_POINTERS_FILE_NAME, "r");   //Open file
+  if (file){        //If file opens correctly...
+     
+    Serial.print("\n   Recovered data: ");  
+    for (uint16_t i = 0; i < sizeof(Variables); i++)
+    {
+      buf[i] = file.read(); //Copies the read byte 
+      Serial.printf("%X ",  buf[i]);
+    } 
+    memcpy(p, buf, sizeof(buf));  //Copies read data to the variable.
+    
+    return true;
+  }
+
+  return false;
+}

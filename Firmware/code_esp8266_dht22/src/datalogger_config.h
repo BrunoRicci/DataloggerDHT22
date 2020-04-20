@@ -41,7 +41,7 @@
 #define ON  1
 #define OFF 0
 
-/* RTC RAM memory:
+/* RTC memory:
 .      START                                     END
 .        | reserved            available          |
 .        |----------|-----------------------------|
@@ -59,26 +59,28 @@
 #define RTC_MEMORY_END_BLOCK            (RTC_MEMORY_END_ADDRESS/RTC_MEMORY_BLOCK_SIZE)
 
 #define RTC_MEMORY_MEASUREMENTS_START_BLOCK     (RTC_MEMORY_START_BLOCK + RTC_MEMORY_RESERVED_BLOCKS)
-#define RTC_MEMORY_MEASUREMENT_BLOCK_SIZE       (sizeof(measurement)/RTC_MEMORY_BLOCK_SIZE)
-#define RTC_MEMORY_MEASUREMENTS_END_BLOCK       (RTC_MEMORY_MEASUREMENTS_START_BLOCK + (12 * RTC_MEMORY_MEASUREMENT_BLOCK_SIZE))
+#define RTC_MEMORY_MEASUREMENT_BLOCK_SIZE       (sizeof(Measurement)/RTC_MEMORY_BLOCK_SIZE)
+#define RTC_MEMORY_MEASUREMENTS_COUNT           12      //12 measurements maximum.
+#define RTC_MEMORY_MEASUREMENTS_END_BLOCK       (RTC_MEMORY_MEASUREMENTS_START_BLOCK + (RTC_MEMORY_MEASUREMENTS_COUNT * RTC_MEMORY_MEASUREMENT_BLOCK_SIZE))
 
-#define RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK   RTC_MEMORY_START_BLOCK
-#define RTC_MEMORY_F_LAST_SAVED_POINTER_BLOCK   (RTC_MEMORY_START_BLOCK + 1)
-#define RTC_MEMORY_F_LAST_SENT_POINTER_BLOCK    (RTC_MEMORY_START_BLOCK + 2)
-
+#define RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK   RTC_MEMORY_START_BLOCK  //For compatibility...
+#define RTC_MEMORY_VARIABLES_START_BLOCK        (RTC_MEMORY_START_BLOCK + 1)
+#define RTC_MEMORY_VARIABLES_BLOCK_SIZE         5       //5 blocks for all the variables -> may vary.
 
 typedef struct{
         uint32_t timestamp;     //seconds from 1970 at UTC
         uint16_t id_sensor[DATALOGGER_SENSOR_COUNT];     //sensor id
         int16_t  temperature[DATALOGGER_SENSOR_COUNT];   //temperature
         uint8_t  humidity[DATALOGGER_SENSOR_COUNT];      //humidity
-}measurement;      //structure alias.
+}Measurement;      //structure alias.
 
 
 /*---------------------------------------------------------*/
 
-#define MEASUREMENTS_FILE_NAME  "measurements.txt"
-#define CONFIG_FILE_NAME        "config.txt"
+#define MEASUREMENTS_FILE_NAME          "measurements.txt"
+#define CONFIG_FILE_NAME                "config.txt"
+#define NVM_POINTERS_FILE_NAME          "variables.txt"
+
 //todo: MAKE DEFINE FOR MAXIMUM NUMBER OF PACKETS PER ARCHIVE READ AND WRITE OPERATION.
 
 
