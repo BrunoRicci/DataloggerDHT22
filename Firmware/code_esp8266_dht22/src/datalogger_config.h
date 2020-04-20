@@ -25,9 +25,10 @@
 #define DHT_SENSOR_3_PIN        4
 #define DHT_SENSOR_4_PIN        5
 
-#define PWR_SENSORS_PIN         13
+#define PWR_SENSORS_PIN         13      //GPIO13 to control sensors power supply.
 #define BATTERY_SENSE_PIN       A0      //A0 oin as analog
-
+#define PWR_CONTROL_PIN         12      //GPIO12 to connect or disconnect battery.
+#define CHARGER_DETECT_PIN      4       //GPIO4 to sense charger.       
 
 //Sensor model (DHT sensor library configuration).
 #define DHTTYPE DHT22           

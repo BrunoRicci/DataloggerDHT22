@@ -28,7 +28,8 @@ DHT dht22_sensor_4(DHT_SENSOR_4_PIN, DHTTYPE);    //Creates DHT22 sensor "sensor
 void portInit(void);
 uint8_t getBatteryLevel(void);           //Get battery level percentage (0 to 100%).
 void setBatteryState(uint8 state=ON);     //Connects or disconnects battery.
-void SetSensorPower(unsigned char state);
+bool isCharging(void);
+void setSensorPower(unsigned char state);
 void wifiTurnOn(void);
 void wifiTurnOff(void);
 void goDeepSleep(uint64_t time);
@@ -36,6 +37,7 @@ void goDeepSleep(uint64_t time);
 void* stringToArray(std::string origin_string);
 int32_t generateMeasurementValue(unsigned char type, float value);
 String formatMeasurementValue(unsigned char type, float value);  //Converts measurements into valid format
+uint32_t getServerTimeUnix(void);
 
 bool writeDataToFlash(String path, void* data, unsigned int bytes);
 bool readDataFromFlash(String path, uint32_t index, void* data, unsigned int bytes);
@@ -67,7 +69,7 @@ void setup() {
   
   
 
-  // SPIFFS.begin();
+  SPIFFS.begin();
   
   // runWebServer();
 
@@ -82,35 +84,30 @@ void setup() {
   dht22_sensor_3.begin();
   dht22_sensor_4.begin();
 
-  SetSensorPower(ON);
+  setSensorPower(ON);
   delay(1000);
   //GET MEASUREMENTS
   for (unsigned char i = 0; i<4 ; i++){
     Serial.printf("\nTemperature_%d: %f\n", i+1, temperature_float[i] );
     Serial.printf("Humidity_%d: %f\n", i+1,humidity_float[i] );
   } 
-  SetSensorPower(OFF);
+  setSensorPower(OFF);
 */
 
     Serial.printf("\n\n time: %d", rtcmem.getCurrentTime());
-    delay(1000);
-    
-
     if (digitalRead(14))    //
     {
       digitalWrite(15,HIGH);
       getBatteryLevel();
-      rtcmem.safeDisconnect();
+      rtcmem.recoverVariables();
+      // rtcmem.safeDisconnect();
     }
     else
     {
       digitalWrite(15,LOW);
-      rtcmem.recoverVariables();
     }
 
-
-
-    goDeepSleep(5e6);
+      goDeepSleep(5e6);
 
 
 
@@ -201,14 +198,21 @@ void loop() {
   } 
 */
   
+  setSensorPower(OFF);
 
+  if(digitalRead(4)){
+    Serial.print("\nUSB is connected.");
+  }
+  else 
+    Serial.print("\nUSB is disconnected.");
 
-
+  delay(1000);
   
 }
 
 void portInit(void){
   pinMode(PWR_SENSORS_PIN, OUTPUT);   //GPIO12 as output
+  pinMode(PWR_CONTROL_PIN, OUTPUT);
   pinMode(14, INPUT);
   pinMode(15, OUTPUT);
   pinMode(13, OUTPUT);
@@ -216,9 +220,20 @@ void portInit(void){
   digitalWrite(15,LOW);
   digitalWrite(13,HIGH);
   digitalWrite(12,HIGH);
-  SetSensorPower(OFF);          //Sensors start turned off.
+  setSensorPower(OFF);          //Sensors start turned off.
+}
 
-
+void setBatteryState(uint8 state){
+  if (state == ON)
+  {
+    // digitalWrite(PWR_CONTROL_PIN, HIGH);
+    pinMode(PWR_CONTROL_PIN, INPUT);
+  }
+  else if (state == OFF)
+  {
+    pinMode(PWR_CONTROL_PIN, OUTPUT);
+    digitalWrite(PWR_CONTROL_PIN, LOW);
+  }  
 }
 
 uint8_t getBatteryLevel(void){
@@ -231,6 +246,14 @@ uint8_t getBatteryLevel(void){
   return percentage;  //Returns battery percentage.
 }
 
+bool isCharging(void){
+  //Returns true if the device is being charged.
+  setSensorPower(OFF);    //Sensors must be powered off in order to detect the charger properly.
+  if ( digitalRead(CHARGER_DETECT_PIN) )  //
+    return true;
+  else
+    return false;  
+}
 
 bool writeDataToFlash(String path, void* data, unsigned int bytes) { // send the right file to the client (if it exists)
   //todo: validate data and bytes parameters. ALso chech if path exists to avoid creating multiple files unnecessarily.
@@ -435,6 +458,10 @@ String generatePOSTRequest( uint16_t id_transceiver, uint8_t battery_level,   //
   return request;
 }
 
+uint32_t getServerTimeUnix(void){
+  //Cnnects to server, sends a request and returns unix time in UTC from server.
+}
+
 int32_t generateMeasurementValue(unsigned char type, float value){
   int32_t measurement=0; 
 
@@ -491,7 +518,7 @@ void goDeepSleep(uint64_t time){
   ESP.deepSleep(time, WAKE_RF_DISABLED);  //deep sleeps for 5 seconds...
 }
 
-void SetSensorPower(unsigned char state){
+void setSensorPower(unsigned char state){
   if (state == ON)
   {
     digitalWrite(PWR_SENSORS_PIN, LOW);  //Turn sensors supply on.

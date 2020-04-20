@@ -175,10 +175,17 @@ uint32_t RtcMemory::getCurrentTime(void){
 bool RtcMemory::safeDisconnect(void){
   //Saves current values for "var" (Variables struct type) into non-volatile memory.
   //File -> NVM_POINTERS_FILE_NAME
-  void* p = &var;
+  Variables* p = &var;
 
   File file = SPIFFS.open(NVM_POINTERS_FILE_NAME, "w");
   if (file) {       //If file opened correctly...
+
+      Serial.printf("\nsafeDiscinnect data being saved:");
+      for (uint16 i = 0; i < sizeof(Variables); i++)
+      {
+        Serial.printf("%X ", ((const char*)p)[i]);
+      }
+
       int bytesWritten = file.write((const char*)(p), sizeof(Variables)); //Overwrites previous data.
       file.close();
       return true;
