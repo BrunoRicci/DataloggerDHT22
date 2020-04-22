@@ -25,24 +25,25 @@
 #define DHT_SENSOR_3_PIN        4
 #define DHT_SENSOR_4_PIN        5
 
-#define PWR_SENSORS_PIN         13      //GPIO13 to control sensors power supply.
-#define BATTERY_SENSE_PIN       A0      //A0 oin as analog
+#define CHARGER_DETECT_PIN      4       //GPIO4 to sense charger.   
 #define PWR_CONTROL_PIN         12      //GPIO12 to connect or disconnect battery.
-#define CHARGER_DETECT_PIN      4       //GPIO4 to sense charger.       
+#define PWR_SENSORS_PIN         13      //GPIO13 to control sensors power supply.
+#define REED_SWITCH_PIN         14
+#define BATTERY_SENSE_PIN       A0      //A0 oin as analog
 
 //Sensor model (DHT sensor library configuration).
 #define DHTTYPE DHT22           
 
 //Power managements parameters.
 #define ADC_VOLTAGE_MV          3300
-#define VBAT_VADC_RATIO         (1.27)
+#define VBAT_VADC_RATIO         (1.27)  //4.2V/3.3V
 #define BATTERY_MAX_VOLTAGE     4200
 #define BATTERY_MIN_VOLTAGE     3300
 
 #define ON  1
 #define OFF 0
 
-/* RTC memory:
+/*  - - - - - - - - - - - - - - - RTC memory: - - - - - - - - - - - - - - - -
 .      START                                     END
 .        | reserved            available          |
 .        |----------|-----------------------------|
@@ -66,7 +67,8 @@
 
 #define RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK   RTC_MEMORY_START_BLOCK  //For compatibility...
 #define RTC_MEMORY_VARIABLES_START_BLOCK        (RTC_MEMORY_START_BLOCK + 1)
-#define RTC_MEMORY_VARIABLES_BLOCK_SIZE         5       //5 blocks for all the variables -> may vary.
+#define RTC_MEMORY_VARIABLES_BLOCK_SIZE         7       //7 blocks for all the variables -> may vary.
+#define RTC_MEMORY_POWER_CHECK_VARIABLE         0xB1            
 
 typedef struct{
         uint32_t timestamp;     //seconds from 1970 at UTC
@@ -83,6 +85,16 @@ typedef struct{
 #define NVM_POINTERS_FILE_NAME          "variables.txt"
 
 //todo: MAKE DEFINE FOR MAXIMUM NUMBER OF PACKETS PER ARCHIVE READ AND WRITE OPERATION.
+
+/*---------------------------------------------------------*/
+
+#define STATE_SEALED            0         //State actually doesn't exist as it operates when device is not powered.
+#define STATE_CONFIGURATION     1
+#define STATE_WAKE              2
+#define STATE_GET_MEASUREMENTS  3
+#define STATE_SAVE_MEASUREMENTS 4
+#define STATE_TRANSMISSION      5
+#define STATE_DEEP_SLEEP        6       //State to go right before deepSleep.
 
 
 

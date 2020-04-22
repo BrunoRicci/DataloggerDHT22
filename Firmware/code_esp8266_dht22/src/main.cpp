@@ -13,8 +13,8 @@
 #include <WebServerFiles.cpp>
 
 #include <FS.h>           //SPIFFS libraries.
-#include <user_interface.h>   //Functions to handle RTC memory.
 #include <rtc_memory.hpp>
+#include <statemachine.hpp>
 
 
 //----------------------------------------------------------------------------------------
@@ -28,11 +28,12 @@ DHT dht22_sensor_4(DHT_SENSOR_4_PIN, DHTTYPE);    //Creates DHT22 sensor "sensor
 void portInit(void);
 uint8_t getBatteryLevel(void);           //Get battery level percentage (0 to 100%).
 void setBatteryState(uint8 state=ON);     //Connects or disconnects battery.
-bool isCharging(void);
 void setSensorPower(unsigned char state);
 void wifiTurnOn(void);
 void wifiTurnOff(void);
 void goDeepSleep(uint64_t time);
+bool isCharging(void);
+bool reedSwitchIsPressed(void);
 
 void* stringToArray(std::string origin_string);
 int32_t generateMeasurementValue(unsigned char type, float value);
@@ -53,10 +54,10 @@ unsigned char handleFormatRam(void);
 unsigned char handleFormatFlash(void);
 //---------------------------------------------------------------------------------------------------------------------
 
-ESP8266WiFiMulti WiFiMulti;
-ESP8266WebServer server(8080);
-
-RtcMemory rtcmem;
+ESP8266WiFiMulti WiFiMulti;             //Wifi client side handle.
+ESP8266WebServer server(8080);          //Server for configuration.
+StateMachine statem(STATE_WAKE);  //Create StateMachine class object. Starts at wake.
+RtcMemory rtcmem;                       //Object to handle rtc memory.
 
 
 void setup() {
@@ -68,10 +69,9 @@ void setup() {
   delay(200);
   
   
-
   SPIFFS.begin();
   
-  // runWebServer();
+  runWebServer();
 
   // handleFormatFlash();  //FOR TESTING ONLY!
   // handleFormatRam();
@@ -92,22 +92,40 @@ void setup() {
     Serial.printf("Humidity_%d: %f\n", i+1,humidity_float[i] );
   } 
   setSensorPower(OFF);
-*/
+*/  
 
-    Serial.printf("\n\n time: %d", rtcmem.getCurrentTime());
-    if (digitalRead(14))    //
-    {
+    if(reedSwitchIsPressed()){
       digitalWrite(15,HIGH);
-      getBatteryLevel();
       rtcmem.recoverVariables();
-      // rtcmem.safeDisconnect();
     }
-    else
-    {
+    else{
       digitalWrite(15,LOW);
     }
 
-      goDeepSleep(5e6);
+    Serial.printf("\n\n time: %d", rtcmem.getCurrentTime());
+    
+    
+    if (isCharging())    //
+    {
+      Serial.print("\n Device charging...");
+      getBatteryLevel();
+      // rtcmem.recoverVariables();
+      // rtcmem.safeDisconnect();
+    }
+
+
+
+
+    goDeepSleep(5e6-millis());    //Make method that returns "compElapsed" to compensate elapsed time (return t-millis()).
+
+  //     if(isCharging() ){
+  //   Serial.print("\nUSB is connected.");
+  // }
+  // else 
+  //   Serial.print("\nUSB is disconnected.");
+
+
+  //     goDeepSleep(5e6 - millis());  //Deep sleep and wake in 5 seconds ()
 
 
 
@@ -151,9 +169,63 @@ void setup() {
   
 }
 
-void loop() {
 
+void loop() {
   server.handleClient(); //Handling of incoming requests
+
+
+
+  //Make method to detect if power was disconnected (to automatically call method
+  // recoverVariables() and initialize rtc memory properly.)
+  
+  /* if(statem.getState() == STATE_WAKE){
+    
+    if(statem.stateInit()){
+      //Checks if device has lost power supply.
+      if(rtcmem.checkPowerdown()){
+          Serial.print("\nDevice has lost power supply");
+          // if(rtcmem.initialize()){  //Recovers variables
+          //   Serial.print("\nRTC memory recovered correctly.");
+          // }
+      }
+      else{
+          Serial.print("\nDevice has not lost power supply");
+      }
+
+      if(digitalRead(REED_SWITCH_PIN)){ //Si el reed switch está activado...
+        rtcmem.safeDisconnect();  //Saves rtc variables to non-volatile.
+        Serial.print("\n   RTC memory content saved to flash.");
+       //Get last machine state stored into rtc memory.
+      }
+    
+
+    }
+   
+    // statem.setState(rtcmem.rwVariables().statem_state); 
+     
+  } 
+  else if (statem.getState() == STATE_GET_MEASUREMENTS){
+    
+  }
+  else if (statem.getState() == STATE_SAVE_MEASUREMENTS){
+   
+  }
+  else if (statem.getState() == STATE_TRANSMISSION){
+    
+  }
+  else if (statem.getState() == STATE_CONFIGURATION){
+   
+  }
+  else if (statem.getState() == STATE_SEALED){
+    
+  } */
+
+
+
+
+
+
+
   //Waits for WiFi connection
 /*   if ((WiFiMulti.run() == WL_CONNECTED)) {
     Serial.printf("WiFi Connected!");
@@ -197,16 +269,7 @@ void loop() {
     }
   } 
 */
-  
-  setSensorPower(OFF);
 
-  if(digitalRead(4)){
-    Serial.print("\nUSB is connected.");
-  }
-  else 
-    Serial.print("\nUSB is disconnected.");
-
-  delay(1000);
   
 }
 
@@ -253,6 +316,12 @@ bool isCharging(void){
     return true;
   else
     return false;  
+}
+
+bool reedSwitchIsPressed(void){
+  //Returns true if reed switch is pressed (when GPIO associated is in logic 1).
+  if(digitalRead(REED_SWITCH_PIN))  return true;
+  else  return false;
 }
 
 bool writeDataToFlash(String path, void* data, unsigned int bytes) { // send the right file to the client (if it exists)
@@ -510,11 +579,15 @@ void* stringToArray(std::string origin_string){
 }
 
 void goDeepSleep(uint64_t time){
+  if(time > 3600000000 ) time = 3600000000;  //Maximum 1h (3600 sec).
+  
   uint32_t t = time/1000000;
   WiFi.disconnect(true);  //Turns off wifi module, so in the wake up it won't turn on automatically until required.
   delay(1);
-  Serial.printf("\nGoing deep sleep for %d seconds... ", (t));
   rtcmem.setElapsedTime(t+(millis()/1000));
+
+  Serial.printf("\nGoing deep sleep for %d seconds... ", (t));
+
   ESP.deepSleep(time, WAKE_RF_DISABLED);  //deep sleeps for 5 seconds...
 }
 
@@ -522,12 +595,12 @@ void setSensorPower(unsigned char state){
   if (state == ON)
   {
     digitalWrite(PWR_SENSORS_PIN, LOW);  //Turn sensors supply on.
-    Serial.printf("Sensors turned on.");
+    Serial.printf("\nSensors turned on.");
   }
   if (state == OFF)
   {
     digitalWrite(PWR_SENSORS_PIN, HIGH);  //Turn sensors supply off.
-    Serial.printf("Sensors turned off.");
+    Serial.printf("\nSensors turned off.");
   }
 }
 
@@ -656,6 +729,7 @@ unsigned char handleFormatRam(void){
       /*Call to format RAM*/
       rtcmem.clearMeasurements();
       Serial.printf("RAM Formatted.");
+      rtcmem.safeDisconnect();
       server.send(200, "text/plain", "Server parameters modified correctly.");
 
       return(1);  //Returns 1 to inform that RAM has been erased correctly. This should drive to a reboot.

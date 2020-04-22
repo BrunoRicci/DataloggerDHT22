@@ -127,6 +127,40 @@ void RtcMemory::clear(void){
   
 }
 
+Variables RtcMemory::rwVariables(void){
+  //Method to read and write variables from object (RAM) to rtc memory in each operation!!!!!!
+  Variables stored;   //temporal variable to read stored data.
+  
+  readData(RTC_MEMORY_VARIABLES_START_BLOCK, &stored, sizeof(stored)); //Read stored data into rtc memory.
+
+  //Checks if any variable saved in RAM (RtcMemory::var) 
+  //differs from the stored into the Rtc memory register.
+  //If there is any modified value, overwrite the different values.
+
+  //if   RAM value       !=    stored value
+    if (var.statem_state != stored.statem_state ||
+    var.measurements_pointer != stored.measurements_pointer ||
+    var.last_sync_time != stored.last_sync_time ||
+    var.current_time != stored.current_time     ||
+    var.archive_sent_pointer!= stored.archive_sent_pointer ||
+    var.archive_saved_pointer != stored.archive_saved_pointer)  //If there were any changes in RAM variables...
+    {
+  //then   write in RTC memory the RAM (new) value.
+        writeData(0, &var, sizeof(var));
+    }
+    else{   //If not changes in RAM variables...
+        //nothing.
+    }
+    return(var);    //Returns actual value of RAM variables (same to RTC memory as these were written right before).
+}
+
+bool RtcMemory::checkPowerdown(void){
+  if( rwVariables().powerdown_check != RTC_MEMORY_POWER_CHECK_VARIABLE)
+    return true;  //
+  else
+    return false; //
+}
+
 bool RtcMemory::arrangeData(Measurement m, uint8_t* data){
   /*This method takes a packet of data read from rtc memory, extract all the members values
   inside of it (using the same struct type) and arrange them into a normalized 24B array.*/
@@ -160,7 +194,6 @@ bool RtcMemory::arrangeData(Measurement m, uint8_t* data){
   return true;
 }
 
-//Read and write variables from object (RAM) to rtc memory in each operation!!!!!!
 void RtcMemory::setElapsedTime(uint32_t time){
   var.current_time += time;   //Modifies actual value adding up the elapsed time.
   writeData(RTC_MEMORY_VARIABLES_START_BLOCK, &var, sizeof(Variables));
