@@ -122,9 +122,16 @@ uint8_t getPointer(void){
 }
 
 void RtcMemory::clear(void){
-  //Initializes rtm memory. Clears all pointers.
-  clearMeasurements();
-  
+   // //CLEARS EVERYTHING!!  Initializes rtm memory. Clears all pointers.
+  // clearMeasurements();
+  // var.measurements_pointer = RTC_MEMORY_MEASUREMENTS_START_BLOCK; //Clears m
+  // var.statem_state = STATE_WAKE;
+  // var.powerdown_check = RTC_MEMORY_POWER_CHECK_VARIABLE;
+  // var.last_sync_time = 0;
+  // var.current_time = 0;
+  // var.archive_sent_pointer = 0;
+  // var.archive_saved_pointer = 0;
+  // rwVariables();  //Save modified variables.
 }
 
 Variables RtcMemory::rwVariables(void){
@@ -146,7 +153,7 @@ Variables RtcMemory::rwVariables(void){
     var.archive_saved_pointer != stored.archive_saved_pointer)  //If there were any changes in RAM variables...
     {
   //then   write in RTC memory the RAM (new) value.
-        writeData(0, &var, sizeof(var));
+        writeData(RTC_MEMORY_VARIABLES_START_BLOCK, &var, sizeof(var));
     }
     else{   //If not changes in RAM variables...
         //nothing.
@@ -159,6 +166,21 @@ bool RtcMemory::checkPowerdown(void){
     return true;  //
   else
     return false; //
+}
+
+bool RtcMemory::initialize(void){
+  //This method is called only once when the supply has been connected to 
+  //the device. It makes sure all the variables in RTC memory and RAM have 
+  //the correct values for a safe operation.
+
+  clearMeasurements();
+  if(recoverVariables()){
+    var.powerdown_check = RTC_MEMORY_POWER_CHECK_VARIABLE;
+    rwVariables(); //Saves modified variable into RTC memory.
+
+    return true;
+  }
+  else return false;
 }
 
 bool RtcMemory::arrangeData(Measurement m, uint8_t* data){
@@ -243,7 +265,7 @@ bool RtcMemory::recoverVariables(void){
       Serial.printf("%X ",  buf[i]);
     } 
     memcpy(p, buf, sizeof(buf));  //Copies read data to the variable.
-    
+    rwVariables();  //Stores read data to RTC memory.
     return true;
   }
 

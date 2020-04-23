@@ -96,24 +96,36 @@ void setup() {
 
     if(reedSwitchIsPressed()){
       digitalWrite(15,HIGH);
-      rtcmem.recoverVariables();
+      if(isCharging()){
+        Serial.print("\n charging...");
+        rtcmem.var.measurements_pointer=74;
+        rtcmem.var.current_time=1234567890;
+        rtcmem.rwVariables(); //Save modified variable.
+        Serial.printf("\n rtcmem variable written: %d", rtcmem.rwVariables().measurements_pointer);
+
+        rtcmem.safeDisconnect();
+      }
+      else{
+        Serial.print("not charging...");
+        rtcmem.recoverVariables();
+      }
     }
     else{
       digitalWrite(15,LOW);
     }
 
-    Serial.printf("\n\n time: %d", rtcmem.getCurrentTime());
-    
-    
-    if (isCharging())    //
-    {
-      Serial.print("\n Device charging...");
-      getBatteryLevel();
-      // rtcmem.recoverVariables();
-      // rtcmem.safeDisconnect();
+    if(rtcmem.checkPowerdown()){
+      Serial.print("\nDevice powered off. Initializing variables from NV memory...");
+      if(rtcmem.initialize())
+        Serial.print("\nVariables recovered successfully.");
+      else 
+        Serial.print("\nError while recovering variables.");
     }
 
+    Serial.printf("\n\n time: %d", rtcmem.getCurrentTime());
 
+    Serial.printf("\n RAM variable read: %d", rtcmem.var.measurements_pointer);
+    Serial.printf("\n rtcmem variable read: %d", rtcmem.rwVariables().measurements_pointer);
 
 
     goDeepSleep(5e6-millis());    //Make method that returns "compElapsed" to compensate elapsed time (return t-millis()).
