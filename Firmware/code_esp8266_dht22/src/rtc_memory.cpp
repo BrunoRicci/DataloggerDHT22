@@ -8,8 +8,7 @@
 RtcMemory::RtcMemory(void){ //Constructor
   //Recover correct values to "var" from RTC memory.
   // readData(RTC_MEMORY_VARIABLES_START_BLOCK, &var, sizeof(var)); //Read stored data into rtc memory.
-
-  
+  system_rtc_mem_read(RTC_MEMORY_VARIABLES_START_BLOCK, &var, sizeof(var));
 }
 
 void RtcMemory::clearMeasurements(void){
@@ -109,24 +108,12 @@ void RtcMemory::readData(int address, void *data, unsigned short int bytes) {
   Serial.printf("temperature: [%d,%d,%d,%d] \n",m.temperature[0],m.temperature[1],m.temperature[2],m.temperature[3]);
   Serial.printf("humidity: [%d,%d,%d,%d] \n",m.humidity[0],m.humidity[1],m.humidity[2],m.humidity[3]);
   /////////////////////////////////////////////////////
-*/
-  Serial.print("\n\nData read from RTC memory:");
-  for (uint16 i = 0; i < bytes; i++)
-  {
-    Serial.printf("%X", ((uint8_t*)(data))[i] );
-  }
-  
+*/  
 }
 
 void RtcMemory::writeData(int address, void* data, uint16_t bytes){
   //Writes data into rtc memory.
   system_rtc_mem_write(address, data, bytes);
-
-  Serial.print("\n\nData written to RTC memory:");
-  for (uint16 i = 0; i < bytes; i++)
-  {
-    Serial.printf("%X", ((uint8_t*)(data))[i] );
-  }
 }
 
 uint8_t getPointer(void){
