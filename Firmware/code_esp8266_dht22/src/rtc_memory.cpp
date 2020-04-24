@@ -6,15 +6,16 @@
 
 
 RtcMemory::RtcMemory(void){ //Constructor
-  // var.rtcmem_pointer = getPointer();
+  //Recover correct values to "var" from RTC memory.
+  // readData(RTC_MEMORY_VARIABLES_START_BLOCK, &var, sizeof(var)); //Read stored data into rtc memory.
+
+  
 }
 
 void RtcMemory::clearMeasurements(void){
   uint8_t initpos = RTC_MEMORY_MEASUREMENTS_START_BLOCK;
   int mem_pointer = RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK;
   system_rtc_mem_write(mem_pointer, &initpos, sizeof(initpos)); //Restarts pointer value.
-
-
 }
 
 bool RtcMemory::saveMeasurements(void *data, unsigned short int bytes){
@@ -95,24 +96,37 @@ void RtcMemory::readData(int address, void *data, unsigned short int bytes) {
   system_rtc_mem_read(address, data, bytes);
   yield();
   /////////////////// DEBUG ///////////////////////////
-  // Measurement m;
-  // system_rtc_mem_read(address, &m, bytes);
-  // uint8_t buffer[288];
-  // system_rtc_mem_read(address, &buffer, bytes);
-  // Serial.printf("\n\nRead measurements:   (block: %d)   data: \n",address);
-  //  for (unsigned short x=0; x < bytes; x++){
-  //     Serial.printf("%X", ((uint8_t*)(buffer))[x] );
-  //   }
-  // Serial.printf("\ntimestamp: %d\n",m.timestamp);
-  // Serial.printf("id_sensor: [%d,%d,%d,%d] \n",m.id_sensor[0],m.id_sensor[1],m.id_sensor[2],m.id_sensor[3]);
-  // Serial.printf("temperature: [%d,%d,%d,%d] \n",m.temperature[0],m.temperature[1],m.temperature[2],m.temperature[3]);
-  // Serial.printf("humidity: [%d,%d,%d,%d] \n",m.humidity[0],m.humidity[1],m.humidity[2],m.humidity[3]);
-  //////////////////////////////////////////////////////
+/* Measurement m;
+  system_rtc_mem_read(address, &m, bytes);
+  uint8_t buffer[288];
+  system_rtc_mem_read(address, &buffer, bytes);
+  Serial.printf("\n\nRead measurements:   (block: %d)   data: \n",address);
+   for (unsigned short x=0; x < bytes; x++){
+      Serial.printf("%X", ((uint8_t*)(buffer))[x] );
+    }
+  Serial.printf("\ntimestamp: %d\n",m.timestamp);
+  Serial.printf("id_sensor: [%d,%d,%d,%d] \n",m.id_sensor[0],m.id_sensor[1],m.id_sensor[2],m.id_sensor[3]);
+  Serial.printf("temperature: [%d,%d,%d,%d] \n",m.temperature[0],m.temperature[1],m.temperature[2],m.temperature[3]);
+  Serial.printf("humidity: [%d,%d,%d,%d] \n",m.humidity[0],m.humidity[1],m.humidity[2],m.humidity[3]);
+  /////////////////////////////////////////////////////
+*/
+  Serial.print("\n\nData read from RTC memory:");
+  for (uint16 i = 0; i < bytes; i++)
+  {
+    Serial.printf("%X", ((uint8_t*)(data))[i] );
+  }
+  
 }
 
 void RtcMemory::writeData(int address, void* data, uint16_t bytes){
   //Writes data into rtc memory.
   system_rtc_mem_write(address, data, bytes);
+
+  Serial.print("\n\nData written to RTC memory:");
+  for (uint16 i = 0; i < bytes; i++)
+  {
+    Serial.printf("%X", ((uint8_t*)(data))[i] );
+  }
 }
 
 uint8_t getPointer(void){
@@ -122,16 +136,16 @@ uint8_t getPointer(void){
 }
 
 void RtcMemory::clear(void){
-   // //CLEARS EVERYTHING!!  Initializes rtm memory. Clears all pointers.
-  // clearMeasurements();
-  // var.measurements_pointer = RTC_MEMORY_MEASUREMENTS_START_BLOCK; //Clears m
-  // var.statem_state = STATE_WAKE;
-  // var.powerdown_check = RTC_MEMORY_POWER_CHECK_VARIABLE;
-  // var.last_sync_time = 0;
-  // var.current_time = 0;
-  // var.archive_sent_pointer = 0;
-  // var.archive_saved_pointer = 0;
-  // rwVariables();  //Save modified variables.
+  //CLEARS EVERYTHING!!  Initializes rtm memory. Clears all pointers.
+  clearMeasurements();
+  var.measurements_pointer = RTC_MEMORY_MEASUREMENTS_START_BLOCK; //Clears m
+  var.statem_state = STATE_WAKE;
+  var.powerdown_check = RTC_MEMORY_POWER_CHECK_VARIABLE;
+  var.last_sync_time = 0;
+  var.current_time = 0;
+  var.archive_sent_pointer = 0;
+  var.archive_saved_pointer = 0;
+  rwVariables();  //Save modified variables.
 }
 
 Variables RtcMemory::rwVariables(void){
@@ -173,11 +187,10 @@ bool RtcMemory::initialize(void){
   //the device. It makes sure all the variables in RTC memory and RAM have 
   //the correct values for a safe operation.
 
-  clearMeasurements();
+  clearMeasurements();    //Clear measurements pointers.
   if(recoverVariables()){
     var.powerdown_check = RTC_MEMORY_POWER_CHECK_VARIABLE;
-    rwVariables(); //Saves modified variable into RTC memory.
-
+    rwVariables(); //Saves recovered variable into RTC memory.
     return true;
   }
   else return false;
@@ -218,13 +231,16 @@ bool RtcMemory::arrangeData(Measurement m, uint8_t* data){
 
 void RtcMemory::setElapsedTime(uint32_t time){
   var.current_time += time;   //Modifies actual value adding up the elapsed time.
-  writeData(RTC_MEMORY_VARIABLES_START_BLOCK, &var, sizeof(Variables));
+  rwVariables();  //Saves to RTC memory.
+
+  // writeData(RTC_MEMORY_VARIABLES_START_BLOCK, &var, sizeof(Variables));
 }
 
 uint32_t RtcMemory::getCurrentTime(void){
   //Returns the time calculated when the last deep sleep happened and adds up the elapsed since then.
-  readData(RTC_MEMORY_VARIABLES_START_BLOCK, &var, sizeof(Variables));
-  return ((var.current_time)+(millis()/1000));
+  // readData(RTC_MEMORY_VARIABLES_START_BLOCK, &var, sizeof(Variables));
+
+  return ((rwVariables().current_time)+(millis()/1000));
 }
 
 bool RtcMemory::safeDisconnect(void){
@@ -265,7 +281,7 @@ bool RtcMemory::recoverVariables(void){
       Serial.printf("%X ",  buf[i]);
     } 
     memcpy(p, buf, sizeof(buf));  //Copies read data to the variable.
-    rwVariables();  //Stores read data to RTC memory.
+    // rwVariables();  //Stores read data to RTC memory.    ////////////////// REMOVED FOR TESTING ///////////
     return true;
   }
 

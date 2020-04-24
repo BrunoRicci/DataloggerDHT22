@@ -97,5 +97,4 @@ typedef struct{
 #define STATE_DEEP_SLEEP        6       //State to go right before deepSleep.
 
 
-
 #endif  //__DATALOGGER_CONFIG_HPP_INCLUDED__
