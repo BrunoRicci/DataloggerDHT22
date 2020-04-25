@@ -26,6 +26,7 @@ uint8_t StateMachine::stateInit(void){
 uint8_t StateMachine::setState(uint8_t new_state){
     uint8_t laststate = _state;
     _state = new_state;
+    INITCONF_FLAG_BYTE &= ~INITCONF_FLAG_BIT;   //Clear flag.
     return(laststate);
 }
 

@@ -67,8 +67,6 @@ void setup() {
   
   
   SPIFFS.begin();
-  
-  // runWebServer();
 
   // handleFormatFlash();  //FOR TESTING ONLY!
   // handleFormatRam();
@@ -91,56 +89,8 @@ void setup() {
   setSensorPower(OFF);
 */  
 
-   /*  if(reedSwitchIsPressed()){
-      digitalWrite(15,HIGH);
-      if(isCharging()){
-        Serial.print("\n charging...");
-        rtcmem.var.measurements_pointer=74;
-        rtcmem.var.current_time=1234567890;
-        rtcmem.rwVariables(); //Save modified variable.
-        Serial.printf("\n rtcmem variable written: %d", rtcmem.rwVariables().measurements_pointer);
-
-        rtcmem.safeDisconnect();
-      }
-      else{
-        Serial.print("not charging...");
-        rtcmem.recoverVariables();
-      }
-    }
-    else{
-      digitalWrite(15,LOW);
-    }
-
-
-    Serial.printf("\n rtcmem variable read: %d", rtcmem.rwVariables().powerdown_check);
-    Serial.printf("\n rtcmem variable read: %d", rtcmem.rwVariables().measurements_pointer);
-    Serial.printf("\n rtcmem variable read: %d", rtcmem.rwVariables().statem_state);
-    Serial.printf("\n rtcmem variable read: %d", rtcmem.rwVariables().current_time);
-
-    rtcmem.clear();
-
-    Serial.printf("\n rtcmem variable read: %d", rtcmem.rwVariables().powerdown_check);
-    Serial.printf("\n rtcmem variable read: %d", rtcmem.rwVariables().statem_state);
-    Serial.printf("\n rtcmem variable read: %d", rtcmem.rwVariables().measurements_pointer);
-    Serial.printf("\n rtcmem variable read: %d", rtcmem.rwVariables().current_time);
-
-   //Try to format flash and RAM and start again...
-
-    if(rtcmem.checkPowerdown()){
-      Serial.print("\nDevice powered off. Initializing variables from NV memory...");
-      rtcmem.var.powerdown_check=0xB1;
-      rtcmem.rwVariables();
-      // if(rtcmem.initialize())
-      //   Serial.print("\nVariables recovered successfully.");
-      // else 
-      //   Serial.print("\nError while recovering variables.");
-    }
-
-    // Serial.printf("\n\n time: %d", rtcmem.getCurrentTime());
-    // Serial.printf("\n RAM variable read: %X", rtcmem.var.powerdown_check);
-    Serial.printf("\n rtcmem variable read: %X", rtcmem.rwVariables().powerdown_check);
- */
-
+ 
+  
 /*   // DEBUG: Write arbitrary data to  RTC memory.
       //Get measurements...
     Measurement m;    
@@ -184,62 +134,74 @@ void setup() {
 
 
 void loop() {
-  server.handleClient(); //Handling of incoming requests
 
   //Make method to detect if power was disconnected (to automatically call method
   // recoverVariables() and initialize rtc memory properly.)
   
   if(statem.getState() == STATE_WAKE){
     
-    if(statem.stateInit()){
+    if(statem.stateInit()){ //State initialization.
        Serial.printf("\n --- State: %d ---", statem.getState());
       
       //Checks if device has lost power supply.
-      Serial.print("\n read powerdown check...");
-      Serial.printf("\n powerdown_check: %d", rtcmem.rwVariables().powerdown_check);
       if(rtcmem.checkPowerdown()){
-          Serial.print("\nDevice has lost power supply");
-          if(rtcmem.initialize()){  //Recovers variables
-            Serial.print("\nRTC memory recovered correctly.");
-            Serial.print("\n intializing...");
-            Serial.printf("\n powerdown_check: %d", rtcmem.rwVariables().powerdown_check);
-
-          }
-          else
-          {
-            Serial.print("\n RTC memory recovery failed.");
-          }
-          /* Problem: Data is actually saved in RTC memory right after boot, but in method
-          rwVariables(), it is overwritten, as data in RAM and RTC will be different after
-          the power up, because RAM variables will start in any value.
-          To avoid this, "initialize" method is used, which will put valid values into 
-          the registers
-
-          SOLUTION:
-            Don't read data with rwVariables method as it also writes it when it's inconsistant.
-            In the first state (wake) or in the RtcMemory constructor, load the RAM variables (var)
-            with values stored in RTC memory with a read-only method.
- */
+        Serial.print("\nDevice has lost power supply");
+        if(rtcmem.initialize())  //Recovers variables
+          Serial.print("\nRTC memory recovered correctly.");
+        else  
+        Serial.print("\n RTC memory recovery failed.");
       }
-      else{
-          Serial.print("\nDevice has not lost power supply");
-      }
+      
+      Serial.printf("\n system_get_time() = %d", system_get_time());
+      Serial.printf("\n system_get_rtc_time = %d", system_get_rtc_time());
+      delay(1000);
+
+      
 
       if(digitalRead(REED_SWITCH_PIN)){ //Si el reed switch está activado...
-        digitalWrite(15,HIGH);     //DEBUG
-        rtcmem.safeDisconnect();  //Saves rtc variables to non-volatile.
-        Serial.print("\n   RTC memory content saved to flash.");
-       //Get last machine state stored into rtc memory.
+        /*
+            To solve: When waking up from switch (not RTC interrupt), the time will unsincronize
+            as the device will go deep sleep from another full hour after that.
+
+            This affects only when the switch being pressed is not detected -> put capacitor to hold
+            the signal the time needed to boot.
+
+            A more effective way would be to get the actual value of RTC counter (in milliseconds) and compare
+            if it has reach the "timer module" -> if it does, this means the wake up was made by the timer and
+            not from the switch.
+        */
+
+       
+        if(isCharging()){   //If charger is connected...
+          delay(5000);
+          if(digitalRead(REED_SWITCH_PIN)){  //If it is still pressed...
+            
+            statem.setState(STATE_CONFIGURATION); //Go to configuration mode.
+          }
+          else
+            statem.setState(STATE_GET_MEASUREMENTS);
+        }
+        else
+        {
+          statem.setState(STATE_GET_MEASUREMENTS);
+        }
+        
+        
       }
-    }
-   
-    // statem.setState(rtcmem.rwVariables().statem_state); 
+    }  
+
+    
      
+    
+
   } 
   else if (statem.getState() == STATE_GET_MEASUREMENTS){
-      
     if(statem.stateInit()){
       Serial.printf("\n --- State: %d ---", statem.getState());
+
+      Serial.print("\n Obtaining measurements... ");
+      delay(1000);
+      statem.setState(STATE_DEEP_SLEEP);
     }
     
   }
@@ -247,19 +209,40 @@ void loop() {
     if(statem.stateInit()){
       Serial.printf("\n --- State: %d ---", statem.getState());
     }
+
   }
   else if (statem.getState() == STATE_TRANSMISSION){
-    
+    if(statem.stateInit()){
+      Serial.printf("\n --- State: %d ---", statem.getState());
+    }
+
   }
   else if (statem.getState() == STATE_CONFIGURATION){
    
+    if(statem.stateInit()){
+      Serial.printf("\n --- State: %d ---", statem.getState());
+      Serial.print("\n  - - - CONFIGURATION MODE - - - ");
+
+      digitalWrite(15,HIGH);      //DEBUG.
+      runWebServer();   //Run web server.
+    }
+
+    server.handleClient(); //Handling of incoming requests
   }
   else if (statem.getState() == STATE_SEALED){
+    if(statem.stateInit()){
+      Serial.printf("\n --- State: %d ---", statem.getState());
+    }
+
+  }
+  else if (statem.getState() == STATE_DEEP_SLEEP){
+    if(statem.stateInit()){
+      Serial.printf("\n --- State: %d ---", statem.getState());
+      goDeepSleep(30e6-millis());
+    }
     
   }
 
-
-  goDeepSleep(15e6-millis());
 
 
 

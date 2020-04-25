@@ -16,6 +16,11 @@
 #define TEMPERATURE     1
 #define HUMIDITY        2
 
+#define SWITCH_HOLD_TIME_CONFIG         5000            //Time to hold the switch until config mode is activated (in milliseconds)
+
+
+//Sensor model (DHT sensor library configuration).
+#define DHTTYPE DHT22     
 
 /*  GPIOs:
         NAME                    GPIO number
@@ -23,17 +28,15 @@
 #define DHT_SENSOR_1_PIN        2
 #define DHT_SENSOR_2_PIN        0
 #define DHT_SENSOR_3_PIN        4
-#define DHT_SENSOR_4_PIN        5
+#define DHT_SENSOR_4_PIN        5       
 
 #define CHARGER_DETECT_PIN      4       //GPIO4 to sense charger.   
 #define PWR_CONTROL_PIN         12      //GPIO12 to connect or disconnect battery.
 #define PWR_SENSORS_PIN         13      //GPIO13 to control sensors power supply.
-#define REED_SWITCH_PIN         14
+#define REED_SWITCH_PIN         14      //GPIO14 to sense switch state.
 #define BATTERY_SENSE_PIN       A0      //A0 oin as analog
 
-//Sensor model (DHT sensor library configuration).
-#define DHTTYPE DHT22           
-
+      
 //Power managements parameters.
 #define ADC_VOLTAGE_MV          3300
 #define VBAT_VADC_RATIO         (1.27)  //4.2V/3.3V
