@@ -129,7 +129,7 @@ void loop() {
     
     if(statem.stateInit()){ //State initialization.
        Serial.print("\n --- State: STATE_WAKE ---");
-
+      wifiTurnOff();
       // if(checkBattery()){
       if(checkBattery()){ //If enough battery remaining...
          //Checks if device has lost power supply.
@@ -187,6 +187,7 @@ void loop() {
     }  
   } 
   else if (statem.getState() == STATE_GET_MEASUREMENTS){
+    
     if(statem.stateInit()){
       Serial.print("\n --- State: STATE_GET_MEASUREMENTS ---");
 
@@ -194,35 +195,31 @@ void loop() {
       
       //   //Save measurements into temporary memory.
       Measurement m = getMeasurements();
-      for (unsigned char i = 0; i<4 ; i++){
-        Serial.printf("\nTemperature_%d: %d", i+1, m.temperature[i] );
-        Serial.printf("\nHumidity_%d: %d", i+1,m.humidity[i] );
-      }
+    
       //   //Save measurements into temporary memory.
-       if ( ! rtcmem.saveMeasurements(&m, sizeof(m))) //If data is not saved correctly in RAM...
+      if ( ! rtcmem.saveMeasurements(&m, sizeof(m))) //If data is not saved correctly in RAM...
       {
         Serial.printf(" \n -------- RTC memory full. Saving data to flash and clearing memory... --------");
         /* save to flash, clear RAM and then rewrite to it */
         
-        uint8 buf[(RTC_MEMORY_MEASUREMENTS_END_BLOCK - RTC_MEMORY_MEASUREMENTS_START_BLOCK)*4];   //Temporary buffer to read measurements
-        rtcmem.readData(RTC_MEMORY_MEASUREMENTS_START_BLOCK, &buf, sizeof(buf));
+        uint8 buf[288];   //Temporary buffer to read measurements.
 
-        // rtcmem.readMeasurements(buf, RTC_MEMORY_MEASUREMENTS_COUNT);
-        
-        archiveWrite(buf, sizeof(buf));
-////////////////// For testing //////////////////
+        uint16_t packets = rtcmem.readMeasurements(buf);
+        Serial.printf("\n    Measurements read from RTC / amount=%d ", packets);
+        archiveWrite(buf, sizeof(Measurement)*packets);   //Write data into archive (flash memory).
+        ////////////////// For testing //////////////////
         Measurement m;
         for (int16_t i = -13; i < -1; i++)
         {
           archiveRead(&m, rtcmem.rwVariables().archive_saved_pointer+i, rtcmem.rwVariables().archive_saved_pointer+i);
           Serial.printf("\nRead measurements from flash:   (packet: %d)   data: \n",rtcmem.rwVariables().archive_saved_pointer+i);
           Serial.printf("\ntimestamp: %d\n",m.timestamp);
-          Serial.printf("id_sen sor: [%d,%d,%d,%d] \n",m.id_sensor[0],m.id_sensor[1],m.id_sensor[2],m.id_sensor[3]);
+          Serial.printf("id_sensor: [%d,%d,%d,%d] \n",m.id_sensor[0],m.id_sensor[1],m.id_sensor[2],m.id_sensor[3]);
           Serial.printf("temperature: [%d,%d,%d,%d] \n",m.temperature[0],m.temperature[1],m.temperature[2],m.temperature[3]);
           Serial.printf("humidity: [%d,%d,%d,%d] \n",m.humidity[0],m.humidity[1],m.humidity[2],m.humidity[3]);
           Serial.print("----------------------------------\n\n");
         }
-//////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////
         rtcmem.clearMeasurements();   //Clears rtc memory.
         rtcmem.saveMeasurements(&m, sizeof(m));   //Saves current measurement.
       }
@@ -252,17 +249,17 @@ void loop() {
       Serial.print("\n Obtaining measurements... ");
       Measurement m = getMeasurements();
   
-      //   //Save measurements into temporary memory.
-      if ( ! rtcmem.saveMeasurements(&m, sizeof(m))) //If data is not saved correctly in RAM...
-      {
+       //   //Save measurements into temporary memory.
+      if ( ! rtcmem.saveMeasurements(&m, sizeof(m))) {//If data is not saved correctly in RAM...
+
         Serial.printf(" \n -------- RTC memory full. Saving data to flash and clearing memory... --------");
         /* save to flash, clear RAM and then rewrite to it */
         
-        uint8 buf[(RTC_MEMORY_MEASUREMENTS_END_BLOCK - RTC_MEMORY_MEASUREMENTS_START_BLOCK)*4];   //Temporary buffer to read measurements.
+        uint8 buf[288];   //Temporary buffer to read measurements.
 
-        Serial.printf("\n Measurements read from RTC memory:   (amount=%d)", rtcmem.readMeasurements(buf, RTC_MEMORY_MEASUREMENTS_COUNT));
-
-        archiveWrite(buf, sizeof(buf));   //Write data into archive (flash memory).
+        uint16_t packets = rtcmem.readMeasurements(buf, 12);
+        Serial.printf("\n    Measurements read from RTC / amount=%d ", packets);
+        archiveWrite(buf, sizeof(Measurement)*packets);   //Write data into archive (flash memory).
         ////////////////// For testing //////////////////
         Measurement m;
         for (int16_t i = -13; i < -1; i++)
@@ -270,7 +267,7 @@ void loop() {
           archiveRead(&m, rtcmem.rwVariables().archive_saved_pointer+i, rtcmem.rwVariables().archive_saved_pointer+i);
           Serial.printf("\nRead measurements from flash:   (packet: %d)   data: \n",rtcmem.rwVariables().archive_saved_pointer+i);
           Serial.printf("\ntimestamp: %d\n",m.timestamp);
-          Serial.printf("id_sen sor: [%d,%d,%d,%d] \n",m.id_sensor[0],m.id_sensor[1],m.id_sensor[2],m.id_sensor[3]);
+          Serial.printf("id_sensor: [%d,%d,%d,%d] \n",m.id_sensor[0],m.id_sensor[1],m.id_sensor[2],m.id_sensor[3]);
           Serial.printf("temperature: [%d,%d,%d,%d] \n",m.temperature[0],m.temperature[1],m.temperature[2],m.temperature[3]);
           Serial.printf("humidity: [%d,%d,%d,%d] \n",m.humidity[0],m.humidity[1],m.humidity[2],m.humidity[3]);
           Serial.print("----------------------------------\n\n");
@@ -278,8 +275,8 @@ void loop() {
         //////////////////////////////////////////////////////
         rtcmem.clearMeasurements();   //Clears rtc memory.
         rtcmem.saveMeasurements(&m, sizeof(m));   //Saves current measurement.
-
       }
+
       // statem.setState(STATE_TRANSMISSION);   //Transmit pending data.
 
       

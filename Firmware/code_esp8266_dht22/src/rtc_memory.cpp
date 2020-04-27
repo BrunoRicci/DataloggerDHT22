@@ -15,6 +15,8 @@ void RtcMemory::clearMeasurements(void){
   uint8_t initpos = RTC_MEMORY_MEASUREMENTS_START_BLOCK;
   int mem_pointer = RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK;
   system_rtc_mem_write(mem_pointer, &initpos, sizeof(initpos)); //Restarts pointer value.
+  // var.measurements_pointer=RTC_MEMORY_MEASUREMENTS_START_BLOCK;
+  // rwVariables();
 }
 
 bool RtcMemory::saveMeasurements(void *data, unsigned short int bytes){
@@ -36,8 +38,10 @@ bool RtcMemory::saveMeasurements(void *data, unsigned short int bytes){
     system_rtc_mem_write(pointer_obtained_measurement,data,bytes);  //Writes measurements in the position the pointer is indexing.
     buffer[0] = pointer_obtained_measurement+RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
     system_rtc_mem_write(RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK,buffer,RTC_MEMORY_BLOCK_SIZE); //Updates the pointer position.
+    // var.measurements_pointer=pointer_obtained_measurement+RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;  //Updates the pointer position.
+    // rwVariables();
+    
     Serial.printf("new pointer value: %d / ", (unsigned int)(buffer[0]));
-
     ////////////////////////////  DEBUG  //////////////////////////////////
     Serial.printf("\nData written to RTC memory:  ");
     Serial.printf("address: %d / ", pointer_obtained_measurement);
@@ -64,12 +68,6 @@ bool RtcMemory::saveMeasurements(void *data, unsigned short int bytes){
 uint16_t RtcMemory::readMeasurements(uint8_t *data, unsigned short int amount){
   //  This method reads "amount" number of measurements from rtc memory, format into the
   //correct format (for flash storage) and put them into "data" pointer.
-
-/*Make predefined value to amount=0. If amount=0 (or not specified in function call), then
-    force it to be equal to (var.measurements_pointer - RTC_MEMORY_MEASUREMENTS_START_BLOCK).
-
-*/
-
   uint16 index=0;  
   Measurement m;
 
@@ -87,9 +85,9 @@ uint16_t RtcMemory::readMeasurements(uint8_t *data, unsigned short int amount){
   i+= RTC_MEMORY_MEASUREMENT_BLOCK_SIZE){
     readData(i, &m, sizeof(Measurement)); //Read data from memory.
 
+    memcpy(data+index, &m, sizeof(Measurement));  //Copies measurement packets into *data.
     //index must increase in jumps of "sizeof(Measurement) (24).
     index += sizeof(Measurement); //Increment index counter.
-    memcpy(data+index, &m, sizeof(Measurement));  //Copies measurement packets into *data.
   }
 
   return amount;
