@@ -251,24 +251,18 @@ void loop() {
       
       Serial.print("\n Obtaining measurements... ");
       Measurement m = getMeasurements();
-      // for (unsigned char i = 0; i<4 ; i++){
-      //   Serial.printf("\nTemperature_%d: %d", i+1, m.temperature[i] );
-      //   Serial.printf("\nHumidity_%d: %d\n", i+1,m.humidity[i] );
-      // }
-      
+  
       //   //Save measurements into temporary memory.
       if ( ! rtcmem.saveMeasurements(&m, sizeof(m))) //If data is not saved correctly in RAM...
       {
         Serial.printf(" \n -------- RTC memory full. Saving data to flash and clearing memory... --------");
         /* save to flash, clear RAM and then rewrite to it */
         
-        uint8 buf[(RTC_MEMORY_MEASUREMENTS_END_BLOCK - RTC_MEMORY_MEASUREMENTS_START_BLOCK)*4];   //Temporary buffer to read measurements
-        rtcmem.readData(RTC_MEMORY_MEASUREMENTS_START_BLOCK, &buf, sizeof(buf));
+        uint8 buf[(RTC_MEMORY_MEASUREMENTS_END_BLOCK - RTC_MEMORY_MEASUREMENTS_START_BLOCK)*4];   //Temporary buffer to read measurements.
 
-        // rtcmem.readMeasurements(buf, RTC_MEMORY_MEASUREMENTS_COUNT);
+        Serial.printf("\n Measurements read from RTC memory:   (amount=%d)", rtcmem.readMeasurements(buf, RTC_MEMORY_MEASUREMENTS_COUNT));
 
-       //if this test doesn't work, read buffer content right before calling archiveWrite().
-        archiveWrite(buf, sizeof(buf));
+        archiveWrite(buf, sizeof(buf));   //Write data into archive (flash memory).
         ////////////////// For testing //////////////////
         Measurement m;
         for (int16_t i = -13; i < -1; i++)
@@ -287,6 +281,8 @@ void loop() {
 
       }
       // statem.setState(STATE_TRANSMISSION);   //Transmit pending data.
+
+      
       statem.setState(STATE_DEEP_SLEEP);
     }
   }
@@ -297,6 +293,7 @@ void loop() {
 
       digitalWrite(15,HIGH);      //DEBUG.
       runWebServer();   //Run web server.
+      // rtcmem.safeDisconnect();   //Better use this when entering configuration mode (save variables)
     }
 
     server.handleClient(); //Handling of incoming requests
