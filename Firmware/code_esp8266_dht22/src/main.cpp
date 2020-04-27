@@ -193,37 +193,22 @@ void loop() {
 
       Serial.print("\n Obtaining measurements... ");
       
-      //   //Save measurements into temporary memory.
       Measurement m = getMeasurements();
     
-      //   //Save measurements into temporary memory.
+      //Save measurements into temporary memory.
       if ( ! rtcmem.saveMeasurements(&m, sizeof(m))) //If data is not saved correctly in RAM...
       {
         Serial.printf(" \n -------- RTC memory full. Saving data to flash and clearing memory... --------");
         /* save to flash, clear RAM and then rewrite to it */
-        
         uint8 buf[288];   //Temporary buffer to read measurements.
 
         uint16_t packets = rtcmem.readMeasurements(buf);
         Serial.printf("\n    Measurements read from RTC / amount=%d ", packets);
         archiveWrite(buf, sizeof(Measurement)*packets);   //Write data into archive (flash memory).
-        ////////////////// For testing //////////////////
-        Measurement m;
-        for (int16_t i = -13; i < -1; i++)
-        {
-          archiveRead(&m, rtcmem.rwVariables().archive_saved_pointer+i, rtcmem.rwVariables().archive_saved_pointer+i);
-          Serial.printf("\nRead measurements from flash:   (packet: %d)   data: \n",rtcmem.rwVariables().archive_saved_pointer+i);
-          Serial.printf("\ntimestamp: %d\n",m.timestamp);
-          Serial.printf("id_sensor: [%d,%d,%d,%d] \n",m.id_sensor[0],m.id_sensor[1],m.id_sensor[2],m.id_sensor[3]);
-          Serial.printf("temperature: [%d,%d,%d,%d] \n",m.temperature[0],m.temperature[1],m.temperature[2],m.temperature[3]);
-          Serial.printf("humidity: [%d,%d,%d,%d] \n",m.humidity[0],m.humidity[1],m.humidity[2],m.humidity[3]);
-          Serial.print("----------------------------------\n\n");
-        }
-        //////////////////////////////////////////////////////
+    
         rtcmem.clearMeasurements();   //Clears rtc memory.
         rtcmem.saveMeasurements(&m, sizeof(m));   //Saves current measurement.
       }
-
 
       statem.setState(STATE_DEEP_SLEEP);
     }
@@ -240,27 +225,30 @@ void loop() {
   else if (statem.getState() == STATE_TRANSMISSION){
     if(statem.stateInit()){
       Serial.print("\n --- State: STATE_TRANSMISSION ---");
+
+      wifiTurnOn();
+
+
     }
   }
   else if (statem.getState() == STATE_FORCE_MEASUREMENT){
     if(statem.stateInit()){
       Serial.print("\n --- State: FORCE STATE_FORCE_MEASUREMENT ---");
-      
       Serial.print("\n Obtaining measurements... ");
+      
       Measurement m = getMeasurements();
-  
-       //   //Save measurements into temporary memory.
-      if ( ! rtcmem.saveMeasurements(&m, sizeof(m))) {//If data is not saved correctly in RAM...
-
+      //   //Save measurements into temporary memory.
+      if ( ! rtcmem.saveMeasurements(&m, sizeof(m))) //If data is not saved correctly in RAM...
+      {
         Serial.printf(" \n -------- RTC memory full. Saving data to flash and clearing memory... --------");
         /* save to flash, clear RAM and then rewrite to it */
         
         uint8 buf[288];   //Temporary buffer to read measurements.
 
-        uint16_t packets = rtcmem.readMeasurements(buf, 12);
+        uint16_t packets = rtcmem.readMeasurements(buf);
         Serial.printf("\n    Measurements read from RTC / amount=%d ", packets);
         archiveWrite(buf, sizeof(Measurement)*packets);   //Write data into archive (flash memory).
-        ////////////////// For testing //////////////////
+      /* ////////////////// For testing //////////////////
         Measurement m;
         for (int16_t i = -13; i < -1; i++)
         {
@@ -273,10 +261,10 @@ void loop() {
           Serial.print("----------------------------------\n\n");
         }
         //////////////////////////////////////////////////////
+      */
         rtcmem.clearMeasurements();   //Clears rtc memory.
         rtcmem.saveMeasurements(&m, sizeof(m));   //Saves current measurement.
       }
-
       // statem.setState(STATE_TRANSMISSION);   //Transmit pending data.
 
       
@@ -730,15 +718,14 @@ void setSensorPower(unsigned char state){
   if (state == ON)
   {
     digitalWrite(PWR_SENSORS_PIN, LOW);  //Turn sensors supply on.
-    Serial.printf("\nSensors turned on.");
+    // Serial.printf("\nSensors turned on.");
   }
   if (state == OFF)
   {
     digitalWrite(PWR_SENSORS_PIN, HIGH);  //Turn sensors supply off.
-    Serial.printf("\nSensors turned off.");
+    // Serial.printf("\nSensors turned off.");
   }
 }
-
 
 void wifiTurnOff(void){
   WiFi.mode( WIFI_OFF );  //Wifi starts turned off after wake up, in order to save energy.

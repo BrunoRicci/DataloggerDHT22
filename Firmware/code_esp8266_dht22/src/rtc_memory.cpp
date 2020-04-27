@@ -15,8 +15,9 @@ void RtcMemory::clearMeasurements(void){
   uint8_t initpos = RTC_MEMORY_MEASUREMENTS_START_BLOCK;
   int mem_pointer = RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK;
   system_rtc_mem_write(mem_pointer, &initpos, sizeof(initpos)); //Restarts pointer value.
-  // var.measurements_pointer=RTC_MEMORY_MEASUREMENTS_START_BLOCK;
-  // rwVariables();
+  
+  var.measurements_pointer=RTC_MEMORY_MEASUREMENTS_START_BLOCK;
+  rwVariables();
 }
 
 bool RtcMemory::saveMeasurements(void *data, unsigned short int bytes){
@@ -38,10 +39,10 @@ bool RtcMemory::saveMeasurements(void *data, unsigned short int bytes){
     system_rtc_mem_write(pointer_obtained_measurement,data,bytes);  //Writes measurements in the position the pointer is indexing.
     buffer[0] = pointer_obtained_measurement+RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
     system_rtc_mem_write(RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK,buffer,RTC_MEMORY_BLOCK_SIZE); //Updates the pointer position.
-    // var.measurements_pointer=pointer_obtained_measurement+RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;  //Updates the pointer position.
-    // rwVariables();
     
-    Serial.printf("new pointer value: %d / ", (unsigned int)(buffer[0]));
+    var.measurements_pointer += RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
+    rwVariables();
+
     ////////////////////////////  DEBUG  //////////////////////////////////
     Serial.printf("\nData written to RTC memory:  ");
     Serial.printf("address: %d / ", pointer_obtained_measurement);
@@ -50,8 +51,8 @@ bool RtcMemory::saveMeasurements(void *data, unsigned short int bytes){
     for (unsigned short x=0; x < bytes; x++){
       Serial.printf("%X", ((uint8_t*)(data))[x] );
     }   ///////////////////////////////////////////////////////////////////
-    Serial.print("\n");
-
+    Serial.printf("\nNew pointer value: %d\n", (unsigned int)(buffer[0]));
+    
     return (true); //Returns 1 to notice that meausrements were correctly saved.
   }
   else    //If there is not enough memory to store new measurements...
@@ -74,7 +75,8 @@ uint16_t RtcMemory::readMeasurements(uint8_t *data, unsigned short int amount){
   if(amount == 0){ //if no amount specified...
     if(var.measurements_pointer > RTC_MEMORY_MEASUREMENTS_START_BLOCK){  //If there are stored measurements...
       //Obtain how many of them.
-      amount = var.measurements_pointer - RTC_MEMORY_MEASUREMENTS_START_BLOCK;
+      //THE ERROR IS HERE!!! FORMULA IS WRONG!
+      amount = (var.measurements_pointer - RTC_MEMORY_MEASUREMENTS_START_BLOCK) / RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
       Serial.printf("\nreadMeasurements() / pointer: %d   /  amount: %d",var.measurements_pointer , amount);
     }
     else  return 0;   //If no values to read, return 0.
