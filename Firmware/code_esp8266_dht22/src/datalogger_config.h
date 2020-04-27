@@ -42,6 +42,7 @@
 #define VBAT_VADC_RATIO         (1.27)  //4.2V/3.3V
 #define BATTERY_MAX_VOLTAGE     4200
 #define BATTERY_MIN_VOLTAGE     3300
+#define BATTERY_MIN_PERCENTAGE  5
 
 #define ON  1
 #define OFF 0
@@ -98,6 +99,7 @@ typedef struct{
 #define STATE_SAVE_MEASUREMENTS 4
 #define STATE_TRANSMISSION      5
 #define STATE_DEEP_SLEEP        6       //State to go right before deepSleep.
+#define STATE_FORCE_MEASUREMENT 7       //State to take measurement, force save to flash, and transmit to server.
 
 
 #endif  //__DATALOGGER_CONFIG_HPP_INCLUDED__

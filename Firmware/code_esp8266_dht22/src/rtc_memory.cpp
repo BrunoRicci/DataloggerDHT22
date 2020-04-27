@@ -94,21 +94,23 @@ bool RtcMemory::readMeasurements(uint8_t *data, unsigned short int amount){
 void RtcMemory::readData(int address, void *data, unsigned short int bytes) {
   system_rtc_mem_read(address, data, bytes);
   yield();
-  /////////////////// DEBUG ///////////////////////////
-/* Measurement m;
-  system_rtc_mem_read(address, &m, bytes);
-  uint8_t buffer[288];
-  system_rtc_mem_read(address, &buffer, bytes);
-  Serial.printf("\n\nRead measurements:   (block: %d)   data: \n",address);
-   for (unsigned short x=0; x < bytes; x++){
-      Serial.printf("%X", ((uint8_t*)(buffer))[x] );
-    }
-  Serial.printf("\ntimestamp: %d\n",m.timestamp);
-  Serial.printf("id_sensor: [%d,%d,%d,%d] \n",m.id_sensor[0],m.id_sensor[1],m.id_sensor[2],m.id_sensor[3]);
-  Serial.printf("temperature: [%d,%d,%d,%d] \n",m.temperature[0],m.temperature[1],m.temperature[2],m.temperature[3]);
-  Serial.printf("humidity: [%d,%d,%d,%d] \n",m.humidity[0],m.humidity[1],m.humidity[2],m.humidity[3]);
+  /////////////////// DEBUG ////////////( not working! )///////////////
+  // Measurement m;
+  // uint8_t buffer[sizeof(m)];
+  
+  // Serial.printf("\n\nRead measurements:   (block: %d)   data: \n",address);
+  //   for (unsigned short x=0; x < bytes; x++){
+  //     system_rtc_mem_read(address, &m, sizeof(m));
+  //     system_rtc_mem_read(address, &buffer, sizeof(buffer));
+
+  //     Serial.printf("%X", ((uint8_t*)(buffer))[x] );
+  //     Serial.printf("\ntimestamp: %d\n",m.timestamp);
+  //     Serial.printf("id_sensor: [%d,%d,%d,%d] \n",m.id_sensor[0],m.id_sensor[1],m.id_sensor[2],m.id_sensor[3]);
+  //     Serial.printf("temperature: [%d,%d,%d,%d] \n",m.temperature[0],m.temperature[1],m.temperature[2],m.temperature[3]);
+  //     Serial.printf("humidity: [%d,%d,%d,%d] \n",m.humidity[0],m.humidity[1],m.humidity[2],m.humidity[3]);
+  //   }
   /////////////////////////////////////////////////////
-*/  
+
 }
 
 void RtcMemory::writeData(int address, void* data, uint16_t bytes){

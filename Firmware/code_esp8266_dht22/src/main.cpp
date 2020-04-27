@@ -28,6 +28,7 @@ DHT dht22_sensor_4(DHT_SENSOR_4_PIN, DHTTYPE);    //Creates DHT22 sensor "sensor
 void portInit(void);
 uint8_t getBatteryLevel(void);           //Get battery level percentage (0 to 100%).
 void setBatteryState(uint8 state=ON);     //Connects or disconnects battery.
+bool checkBattery(void);
 void setSensorPower(unsigned char state);
 void wifiTurnOn(void);
 void wifiTurnOff(void);
@@ -38,14 +39,16 @@ bool reedSwitchIsPressed(void);
 void* stringToArray(std::string origin_string);
 int32_t generateMeasurementValue(unsigned char type, float value);
 String formatMeasurementValue(unsigned char type, float value);  //Converts measurements into valid format
+Measurement getMeasurements(void);
 uint32_t getServerTimeUnix(void);
 
 bool writeDataToFlash(String path, void* data, unsigned int bytes);
 bool readDataFromFlash(String path, uint32_t index, void* data, unsigned int bytes);
 bool archiveWrite(void* data, uint16_t bytes);
-bool archiveRead(uint32_t start_index, uint32_t end_index);
+bool archiveRead(void* data, uint32_t first_packet, uint32_t last_packet);
 uint32_t archiveGetPointer(void);
-//Functions to handle 
+
+//Functions to handle web server
 void handleHome(void);
 void handleChangeNetworkConfig(void);
 void handleChangeServerConfig(void);
@@ -72,22 +75,6 @@ void setup() {
   // handleFormatRam();
 
 //////////////////////////////////////////////////////////////
-
-/* 
-  dht22_sensor_1.begin();           //Initializes objects.
-  dht22_sensor_2.begin();
-  dht22_sensor_3.begin();
-  dht22_sensor_4.begin();
-
-  setSensorPower(ON);
-  delay(1000);
-  //GET MEASUREMENTS
-  for (unsigned char i = 0; i<4 ; i++){
-    Serial.printf("\nTemperature_%d: %f\n", i+1, temperature_float[i] );
-    Serial.printf("Humidity_%d: %f\n", i+1,humidity_float[i] );
-  } 
-  setSensorPower(OFF);
-*/  
 
  
   
@@ -141,87 +128,172 @@ void loop() {
   if(statem.getState() == STATE_WAKE){
     
     if(statem.stateInit()){ //State initialization.
-       Serial.printf("\n --- State: %d ---", statem.getState());
-      
-      //Checks if device has lost power supply.
-      if(rtcmem.checkPowerdown()){
-        Serial.print("\nDevice has lost power supply");
-        if(rtcmem.initialize())  //Recovers variables
-          Serial.print("\nRTC memory recovered correctly.");
-        else  
-        Serial.print("\n RTC memory recovery failed.");
-      }
-      
-      Serial.printf("\n system_get_time() = %d", system_get_time());
-      Serial.printf("\n system_get_rtc_time = %d", system_get_rtc_time());
-      delay(1000);
+       Serial.print("\n --- State: STATE_WAKE ---");
 
-      
-
-      if(digitalRead(REED_SWITCH_PIN)){ //Si el reed switch está activado...
-        /*
-            To solve: When waking up from switch (not RTC interrupt), the time will unsincronize
-            as the device will go deep sleep from another full hour after that.
-
-            This affects only when the switch being pressed is not detected -> put capacitor to hold
-            the signal the time needed to boot.
-
-            A more effective way would be to get the actual value of RTC counter (in milliseconds) and compare
-            if it has reach the "timer module" -> if it does, this means the wake up was made by the timer and
-            not from the switch.
-        */
+      // if(checkBattery()){
+      if(checkBattery()){ //If enough battery remaining...
+         //Checks if device has lost power supply.
+        if(rtcmem.checkPowerdown()){
+          setBatteryState(ON);  //Connect battery.
+          if(rtcmem.initialize())  //Recovers variables
+            Serial.print("\nDevice powered off. RTC memory recovered correctly.");
+          else  
+          Serial.print("\n RTC memory recovery failed.");
+        }
+        
+        /*RTC and external interrupt are not differenced once 
+        the device goes into deep sleep. It will always detect 
+        as "RTC interrupt".*/
+        /*Use the previous detection mode (reedSwitchIsPressed())*/
 
        
-        if(isCharging()){   //If charger is connected...
-          delay(5000);
-          if(digitalRead(REED_SWITCH_PIN)){  //If it is still pressed...
-            
-            statem.setState(STATE_CONFIGURATION); //Go to configuration mode.
+        if(reedSwitchIsPressed()){  //if external interrupt (switch was pressed)...
+          Serial.print("\n\nExternal interrupt.");
+          
+          /*
+              To solve: When waking up from switch (not RTC interrupt), the time will unsincronize
+              as the device will go deep sleep from another full hour after that.
+
+              This affects only when the switch being pressed is not detected -> put capacitor to hold
+              the signal the time needed to boot.
+
+              A more effective way would be to get the actual value of RTC counter (in milliseconds) and compare
+              if it has reach the "timer module" -> if it does, this means the wake up was made by the timer and
+              not from the switch.
+          */  
+          if( ! isCharging()){   //If charger is not connected...
+            statem.setState(STATE_FORCE_MEASUREMENT);    //Forces measurement.
           }
-          else
-            statem.setState(STATE_GET_MEASUREMENTS);
-        }
-        else
-        {
+          else  //If charger is connected...
+          {
+            Serial.printf("\n awaiting hold for config mode...");
+            delay(SWITCH_HOLD_TIME_CONFIG);  //Waits for a moment...
+            if(reedSwitchIsPressed()){       //If switch is still pressed...
+              statem.setState(STATE_CONFIGURATION); //Go to configuration mode.
+            }
+            else    //if not hold...
+              statem.setState(STATE_FORCE_MEASUREMENT);  //Forces measurement.
+          }
+        }  
+        else{   //If switch was not pressed (RTC interrupt.)
+          Serial.print("\n\nRTC interrupt.");
           statem.setState(STATE_GET_MEASUREMENTS);
         }
-        
-        
+      }
+      else      //If out of battery.
+      {
+        statem.setState(STATE_SEALED);    //Turn off.
       }
     }  
-
-    
-     
-    
-
   } 
   else if (statem.getState() == STATE_GET_MEASUREMENTS){
     if(statem.stateInit()){
-      Serial.printf("\n --- State: %d ---", statem.getState());
+      Serial.print("\n --- State: STATE_GET_MEASUREMENTS ---");
 
       Serial.print("\n Obtaining measurements... ");
-      delay(1000);
+      
+      //   //Save measurements into temporary memory.
+      Measurement m = getMeasurements();
+      for (unsigned char i = 0; i<4 ; i++){
+        Serial.printf("\nTemperature_%d: %d", i+1, m.temperature[i] );
+        Serial.printf("\nHumidity_%d: %d", i+1,m.humidity[i] );
+      }
+      //   //Save measurements into temporary memory.
+       if ( ! rtcmem.saveMeasurements(&m, sizeof(m))) //If data is not saved correctly in RAM...
+      {
+        Serial.printf(" \n -------- RTC memory full. Saving data to flash and clearing memory... --------");
+        /* save to flash, clear RAM and then rewrite to it */
+        
+        uint8 buf[(RTC_MEMORY_MEASUREMENTS_END_BLOCK - RTC_MEMORY_MEASUREMENTS_START_BLOCK)*4];   //Temporary buffer to read measurements
+        rtcmem.readData(RTC_MEMORY_MEASUREMENTS_START_BLOCK, &buf, sizeof(buf));
+
+        // rtcmem.readMeasurements(buf, RTC_MEMORY_MEASUREMENTS_COUNT);
+        
+        archiveWrite(buf, sizeof(buf));
+////////////////// For testing //////////////////
+        Measurement m;
+        for (int16_t i = -13; i < -1; i++)
+        {
+          archiveRead(&m, rtcmem.rwVariables().archive_saved_pointer+i, rtcmem.rwVariables().archive_saved_pointer+i);
+          Serial.printf("\nRead measurements from flash:   (packet: %d)   data: \n",rtcmem.rwVariables().archive_saved_pointer+i);
+          Serial.printf("\ntimestamp: %d\n",m.timestamp);
+          Serial.printf("id_sen sor: [%d,%d,%d,%d] \n",m.id_sensor[0],m.id_sensor[1],m.id_sensor[2],m.id_sensor[3]);
+          Serial.printf("temperature: [%d,%d,%d,%d] \n",m.temperature[0],m.temperature[1],m.temperature[2],m.temperature[3]);
+          Serial.printf("humidity: [%d,%d,%d,%d] \n",m.humidity[0],m.humidity[1],m.humidity[2],m.humidity[3]);
+          Serial.print("----------------------------------\n\n");
+        }
+//////////////////////////////////////////////////////
+        rtcmem.clearMeasurements();   //Clears rtc memory.
+        rtcmem.saveMeasurements(&m, sizeof(m));   //Saves current measurement.
+      }
+
+
       statem.setState(STATE_DEEP_SLEEP);
     }
     
   }
   else if (statem.getState() == STATE_SAVE_MEASUREMENTS){
     if(statem.stateInit()){
-      Serial.printf("\n --- State: %d ---", statem.getState());
+      Serial.print("\n --- State: STATE_SAVE_MEASUREMENTS ---");
+
     }
+    
 
   }
   else if (statem.getState() == STATE_TRANSMISSION){
     if(statem.stateInit()){
-      Serial.printf("\n --- State: %d ---", statem.getState());
+      Serial.print("\n --- State: STATE_TRANSMISSION ---");
     }
+  }
+  else if (statem.getState() == STATE_FORCE_MEASUREMENT){
+    if(statem.stateInit()){
+      Serial.print("\n --- State: FORCE STATE_FORCE_MEASUREMENT ---");
+      
+      Serial.print("\n Obtaining measurements... ");
+      Measurement m = getMeasurements();
+      // for (unsigned char i = 0; i<4 ; i++){
+      //   Serial.printf("\nTemperature_%d: %d", i+1, m.temperature[i] );
+      //   Serial.printf("\nHumidity_%d: %d\n", i+1,m.humidity[i] );
+      // }
+      
+      //   //Save measurements into temporary memory.
+      if ( ! rtcmem.saveMeasurements(&m, sizeof(m))) //If data is not saved correctly in RAM...
+      {
+        Serial.printf(" \n -------- RTC memory full. Saving data to flash and clearing memory... --------");
+        /* save to flash, clear RAM and then rewrite to it */
+        
+        uint8 buf[(RTC_MEMORY_MEASUREMENTS_END_BLOCK - RTC_MEMORY_MEASUREMENTS_START_BLOCK)*4];   //Temporary buffer to read measurements
+        rtcmem.readData(RTC_MEMORY_MEASUREMENTS_START_BLOCK, &buf, sizeof(buf));
 
+        // rtcmem.readMeasurements(buf, RTC_MEMORY_MEASUREMENTS_COUNT);
+
+       //if this test doesn't work, read buffer content right before calling archiveWrite().
+        archiveWrite(buf, sizeof(buf));
+        ////////////////// For testing //////////////////
+        Measurement m;
+        for (int16_t i = -13; i < -1; i++)
+        {
+          archiveRead(&m, rtcmem.rwVariables().archive_saved_pointer+i, rtcmem.rwVariables().archive_saved_pointer+i);
+          Serial.printf("\nRead measurements from flash:   (packet: %d)   data: \n",rtcmem.rwVariables().archive_saved_pointer+i);
+          Serial.printf("\ntimestamp: %d\n",m.timestamp);
+          Serial.printf("id_sen sor: [%d,%d,%d,%d] \n",m.id_sensor[0],m.id_sensor[1],m.id_sensor[2],m.id_sensor[3]);
+          Serial.printf("temperature: [%d,%d,%d,%d] \n",m.temperature[0],m.temperature[1],m.temperature[2],m.temperature[3]);
+          Serial.printf("humidity: [%d,%d,%d,%d] \n",m.humidity[0],m.humidity[1],m.humidity[2],m.humidity[3]);
+          Serial.print("----------------------------------\n\n");
+        }
+        //////////////////////////////////////////////////////
+        rtcmem.clearMeasurements();   //Clears rtc memory.
+        rtcmem.saveMeasurements(&m, sizeof(m));   //Saves current measurement.
+
+      }
+      // statem.setState(STATE_TRANSMISSION);   //Transmit pending data.
+      statem.setState(STATE_DEEP_SLEEP);
+    }
   }
   else if (statem.getState() == STATE_CONFIGURATION){
    
     if(statem.stateInit()){
-      Serial.printf("\n --- State: %d ---", statem.getState());
-      Serial.print("\n  - - - CONFIGURATION MODE - - - ");
+      Serial.print("\n --- State: STATE_CONFIGURATION ---");
 
       digitalWrite(15,HIGH);      //DEBUG.
       runWebServer();   //Run web server.
@@ -231,17 +303,24 @@ void loop() {
   }
   else if (statem.getState() == STATE_SEALED){
     if(statem.stateInit()){
-      Serial.printf("\n --- State: %d ---", statem.getState());
+      Serial.print("\n --- State: STATE_SEALED ---");
+      rtcmem.safeDisconnect();    //Saves variables...
+      //Log power failure.
+      delay(100);     //100ms delay.
+      setBatteryState(OFF); //Disconnect battery, device will turn off.
     }
 
   }
   else if (statem.getState() == STATE_DEEP_SLEEP){
     if(statem.stateInit()){
-      Serial.printf("\n --- State: %d ---", statem.getState());
+      Serial.print("\n --- State: STATE_DEEP_SLEEP ---");
+
+      Serial.printf("\nDevice's been running for %d ms.", millis());
       goDeepSleep(30e6-millis());
     }
     
   }
+
 
 
 
@@ -300,18 +379,18 @@ void portInit(void){
   pinMode(14, INPUT);
   pinMode(15, OUTPUT);
   pinMode(13, OUTPUT);
-  pinMode(12, OUTPUT);
+  pinMode(PWR_CONTROL_PIN, OUTPUT);
+  digitalWrite(PWR_CONTROL_PIN,HIGH);
   digitalWrite(15,LOW);
   digitalWrite(13,HIGH);
-  digitalWrite(12,HIGH);
   setSensorPower(OFF);          //Sensors start turned off.
 }
 
 void setBatteryState(uint8 state){
   if (state == ON)
   {
-    // digitalWrite(PWR_CONTROL_PIN, HIGH);
-    pinMode(PWR_CONTROL_PIN, INPUT);
+    digitalWrite(PWR_CONTROL_PIN, HIGH);
+    pinMode(PWR_CONTROL_PIN, OUTPUT);
   }
   else if (state == OFF)
   {
@@ -330,13 +409,22 @@ uint8_t getBatteryLevel(void){
   return percentage;  //Returns battery percentage.
 }
 
+bool checkBattery(void){
+  if (getBatteryLevel() >= BATTERY_MIN_PERCENTAGE) 
+    return true;    
+  else            //when out of battery
+    return false;     
+}
+
 bool isCharging(void){
   //Returns true if the device is being charged.
   setSensorPower(OFF);    //Sensors must be powered off in order to detect the charger properly.
   if ( digitalRead(CHARGER_DETECT_PIN) )  //
-    return true;
+   { Serial.print("\nCharging.");
+     return true;}
   else
-    return false;  
+   { Serial.print("\nNot charging.");
+   return false; } 
 }
 
 bool reedSwitchIsPressed(void){
@@ -414,10 +502,14 @@ bool archiveWrite(void* data, uint16_t bytes){
       
       int bytesWritten = file.write((const char*)data,bytes);
 
-      if (bytesWritten > 0) {
-          Serial.printf("\nFile was written, %d bytes",bytesWritten);
-      } else {
+      if (bytesWritten == bytes) {  //If every byte is written...
+        rtcmem.var.archive_saved_pointer=archiveGetPointer();   //Move pointer.
+        rtcmem.rwVariables();
+        Serial.printf("\nFile was written, %d bytes",bytesWritten);
+      }else {
         Serial.println("\nFile write failed");
+        file.close();
+        return false;
       }
       file.close();
       return true;
@@ -431,6 +523,7 @@ bool archiveWrite(void* data, uint16_t bytes){
 }
 
 bool archiveRead(void* data, uint32_t first_packet, uint32_t last_packet){
+
   //Read archive from one packet index to other. "start index" is the first reference and "end_index" the last one.
   //This function will copy the content from the first packet in the archive to the last one, including both
   //mentioned packets and each one between them, in the order they are saved into the archive.
@@ -445,11 +538,11 @@ bool archiveRead(void* data, uint32_t first_packet, uint32_t last_packet){
     File file = SPIFFS.open(MEASUREMENTS_FILE_NAME, "r");   //Open file
     if (file){        //If file opens correctly...
       //If file end is not going to be reached...
-      if( file.available() >= total_bytes )  
+      if( file.available() >= total_bytes )
       { 
-          file.seek(first_packet*RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*RTC_MEMORY_BLOCK_SIZE,
-                    fs::SeekSet);    //Move the cursor to the first packet position.
-
+          file.seek(first_packet*sizeof(Measurement),
+                    fs::SeekSet);    //Move the cursor to the first_packet position.
+          Serial.printf("archiveRead() first_packet: %d, last_packet: %d,   seek value:%d", first_packet, last_packet, first_packet*sizeof(Measurement));
           Serial.printf("\nData read from archive:   (currpos = %d)\n", file.position());   //For debugging...
           
           for (uint32 i = 0; i < total_bytes; i++)    //Writes data output buffer
@@ -482,6 +575,36 @@ uint32_t archiveGetPointer(void){
       // Serial.printf("\nFile size = %d)\n", size);   //For debugging...
     }
   return (1+size/(RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*RTC_MEMORY_BLOCK_SIZE));   
+}
+
+Measurement getMeasurements(void){
+  //Turns sensors on, take measurements, format them and return.
+  Measurement m;
+  dht22_sensor_1.begin();           //Initializes objects.
+  dht22_sensor_2.begin();
+  dht22_sensor_3.begin();
+  dht22_sensor_4.begin();
+
+  setSensorPower(ON);
+  delay(1000);  
+  //GET MEASUREMENTS
+  m.timestamp=rtcmem.getCurrentTime();  //Put current timestamp
+  m.id_sensor[0] = 1;   //Read sensor number from configuration file.
+  m.id_sensor[1] = 2; 
+  m.id_sensor[2] = 3; 
+  m.id_sensor[3] = 4;
+  m.temperature[0] = generateMeasurementValue(TEMPERATURE, dht22_sensor_1.readTemperature());
+  m.temperature[1] = generateMeasurementValue(TEMPERATURE, dht22_sensor_2.readTemperature());
+  m.temperature[2] = generateMeasurementValue(TEMPERATURE, dht22_sensor_3.readTemperature());
+  m.temperature[3] = generateMeasurementValue(TEMPERATURE, dht22_sensor_4.readTemperature());
+  m.humidity[0] = generateMeasurementValue(HUMIDITY, dht22_sensor_1.readHumidity());; 
+  m.humidity[1] = generateMeasurementValue(HUMIDITY, dht22_sensor_2.readHumidity());; 
+  m.humidity[2] = generateMeasurementValue(HUMIDITY, dht22_sensor_3.readHumidity());; 
+  m.humidity[3] = generateMeasurementValue(HUMIDITY, dht22_sensor_4.readHumidity());;  
+
+  setSensorPower(OFF);
+
+  return(m);
 }
 
 String generatePOSTRequest( uint16_t id_transceiver, uint8_t battery_level,   //Header elements
@@ -563,9 +686,6 @@ int32_t generateMeasurementValue(unsigned char type, float value){
   { // 0 ~ 100 ->  0% to 100%
     measurement = (uint8_t)(value);
   }
-
-  Serial.printf("\n\nMeasurement: %d \n", measurement);
-
   return(measurement);
 }
 
@@ -640,6 +760,8 @@ void wifiTurnOn(void){
   WiFiMulti.addAP("Fibertel WiFi866 2.4GHz", "01416592736");
 }
 
+
+//////////////////////////// WEB SERVER FUNCTIONS /////////////////////////////////
 unsigned char runWebServer(void){ 
 
   String ap_ssid="Datalogger";
@@ -703,8 +825,8 @@ void handleChangeNetworkConfig(void){
         server.send(200, "text/html", "ERROR: Wrong parameters.");
     }
 
-  uint8_t buf[RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4]; //24 Bytes
-  readDataFromFlash(MEASUREMENTS_FILE_NAME, 0, buf, sizeof(buf));
+  // uint8_t buf[RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4]; //24 Bytes
+  // readDataFromFlash(MEASUREMENTS_FILE_NAME, 0, buf, sizeof(buf));
 
   Measurement m;  
   for (uint16 i = 0; i < 12; i++)
