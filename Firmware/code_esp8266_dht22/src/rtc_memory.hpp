@@ -22,7 +22,7 @@ class RtcMemory{
         uint8_t getPointer(void);
         void clearMeasurements(void);
         bool saveMeasurements(void *data, unsigned short int bytes);
-        bool readMeasurements(uint8_t *data, unsigned short int amount);
+        uint16_t readMeasurements(uint8_t *data, unsigned short int amount=0);
         void writeData(int address, void* data, uint16_t bytes);
         void readData(int address, void *data, unsigned short int bytes);
         void setElapsedTime(uint32_t time);

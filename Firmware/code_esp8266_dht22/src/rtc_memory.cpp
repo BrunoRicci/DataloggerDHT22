@@ -61,34 +61,38 @@ bool RtcMemory::saveMeasurements(void *data, unsigned short int bytes){
   }
 }
 
-bool RtcMemory::readMeasurements(uint8_t *data, unsigned short int amount){
+uint16_t RtcMemory::readMeasurements(uint8_t *data, unsigned short int amount){
   //  This method reads "amount" number of measurements from rtc memory, format into the
   //correct format (for flash storage) and put them into "data" pointer.
 
-  uint8 buffer[RTC_MEMORY_MEASUREMENT_BLOCK_SIZE * 4]; //24B long buffer.
+/*Make predefined value to amount=0. If amount=0 (or not specified in function call), then
+    force it to be equal to (var.measurements_pointer - RTC_MEMORY_MEASUREMENTS_START_BLOCK).
+
+*/
+
+  uint16 index=0;  
   Measurement m;
-  for (uint8 i = RTC_MEMORY_MEASUREMENTS_START_BLOCK; 
-      i < RTC_MEMORY_MEASUREMENTS_START_BLOCK + amount*RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
-      i+= RTC_MEMORY_MEASUREMENT_BLOCK_SIZE){
-        readData(i, &m, RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4);
 
-        arrangeData(m, buffer);   //Copies measurements arranged in the correct format to "buffer".
-        
-        // arraycpy(data+(sizeof(buffer) * (RTC_MEMORY_MEASUREMENTS_START_BLOCK-i)), buffer, sizeof(buffer));
-        memcpy(data+(sizeof(buffer) * (RTC_MEMORY_MEASUREMENTS_START_BLOCK+i)), buffer, sizeof(buffer));
-
-        Serial.printf("\n\nRead measurements:   (block: %d)  [%d bytes]  data: \n",i, RTC_MEMORY_MEASUREMENT_BLOCK_SIZE * 4);
-        for (unsigned short x=0; x < 24; x++){
-          Serial.printf("%X ", ((uint8_t*)(buffer))[x] );
-        }
-        Serial.printf("\ntimestamp: %d\n",m.timestamp);
-        Serial.printf("id_sensor: [%d,%d,%d,%d] \n",m.id_sensor[0],m.id_sensor[1],m.id_sensor[2],m.id_sensor[3]);
-        Serial.printf("temperature: [%d,%d,%d,%d] \n",m.temperature[0],m.temperature[1],m.temperature[2],m.temperature[3]);
-        Serial.printf("humidity: [%d,%d,%d,%d] \n",m.humidity[0],m.humidity[1],m.humidity[2],m.humidity[3]);
+  if(amount == 0){ //if no amount specified...
+    if(var.measurements_pointer > RTC_MEMORY_MEASUREMENTS_START_BLOCK){  //If there are stored measurements...
+      //Obtain how many of them.
+      amount = var.measurements_pointer - RTC_MEMORY_MEASUREMENTS_START_BLOCK;
+      Serial.printf("\nreadMeasurements() / pointer: %d   /  amount: %d",var.measurements_pointer , amount);
+    }
+    else  return 0;   //If no values to read, return 0.
   }
 
+  for (uint8 i = RTC_MEMORY_MEASUREMENTS_START_BLOCK; 
+  i < RTC_MEMORY_MEASUREMENTS_START_BLOCK + amount*RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
+  i+= RTC_MEMORY_MEASUREMENT_BLOCK_SIZE){
+    readData(i, &m, sizeof(Measurement)); //Read data from memory.
 
-  return true;
+    //index must increase in jumps of "sizeof(Measurement) (24).
+    index += sizeof(Measurement); //Increment index counter.
+    memcpy(data+index, &m, sizeof(Measurement));  //Copies measurement packets into *data.
+  }
+
+  return amount;
 }
 
 void RtcMemory::readData(int address, void *data, unsigned short int bytes) {
