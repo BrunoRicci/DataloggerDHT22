@@ -1,5 +1,5 @@
 #include <Arduino.h>
-//#include <string.h>
+#include <ArduinoJson.h>
 #include <time.h>
 
 #include <ESP8266WiFi.h>
@@ -47,6 +47,7 @@ bool readDataFromFlash(String path, uint32_t index, void* data, unsigned int byt
 bool archiveWrite(void* data, uint16_t bytes);
 bool archiveRead(void* data, uint32_t first_packet, uint32_t last_packet);
 uint32_t archiveGetPointer(void);
+bool initglobals(void);
 
 //Functions to handle web server
 void handleHome(void);
@@ -57,16 +58,39 @@ unsigned char handleFormatRam(void);
 unsigned char handleFormatFlash(void);
 //---------------------------------------------------------------------------------------------------------------------
 
+typedef struct{
+  char ap_ssid[31];
+  char ap_pass[31];   
+  char local_ip[16];      //192.168.255.255 ->15 + NULL
+  uint8_t   connection_retry;   //1
+  uint16_t  response_timeout;   //2seg
+  // todo: evaluate which WPA2-Enterprise parameters are needed.
+  uint8_t wifi_security_type;   //enum WPA, WPA2, WPA2 enterprise, etc.
+
+  uint16_t id_sensor_1;     //Parameters to put into POST request.
+  uint16_t id_sensor_2;
+  uint16_t id_sensor_3;
+  uint16_t id_sensor_4;
+  uint16_t id_transceiver;    
+
+  uint8_t battery_level;
+
+  uint16_t  sample_time; // (seconds)
+
+} Globals;
+
 ESP8266WiFiMulti WiFiMulti;             //Wifi client side handle.
 ESP8266WebServer server(8080);          //Server for configuration.
 StateMachine statem(STATE_WAKE);  //Create StateMachine class object. Starts at wake.
 RtcMemory rtcmem;                       //Object to handle rtc memory.
+Globals globals;
 
 
 void setup() {
   portInit();
   wifiTurnOff();
   Serial.begin(115200);
+  initglobals();
   
   
   SPIFFS.begin();
@@ -741,6 +765,13 @@ void wifiTurnOn(void){
   WiFiMulti.addAP("Fibertel WiFi866 2.4GHz", "01416592736");
 }
 
+bool initglobals(void){
+  /*  Read configuration file (JSON) and load data into Globals struct. 
+  First load all the data from file into a string, and then parse it to a Json buffer,
+  to then extract the values from each keyword.
+  If file not found, load default values, defined in this function.
+  */
+}
 
 //////////////////////////// WEB SERVER FUNCTIONS /////////////////////////////////
 unsigned char runWebServer(void){ 
@@ -878,6 +909,14 @@ unsigned char handleFormatFlash(void){
 
 }
 
+bool handleChangeConfig(void){
+  /*
+    Open configuration file (JSON) and overwrite the values received. 
+    If any entry is invalid or blank/null, don't overwrite it.
+    Also data should be validated from both browser (Javascript code) 
+    and this function too, in order to avoid errors.
+  */
+}
 
 /*
     Make funcions to:
