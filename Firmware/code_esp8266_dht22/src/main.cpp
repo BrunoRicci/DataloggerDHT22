@@ -63,12 +63,14 @@ unsigned char handleFormatFlash(void);
 typedef struct{
   char server_ap_ssid[31];
   char server_ap_pass[31];   
+  char server_ip[16];
   uint16_t server_port;
   char local_ip[16];      //192.168.255.255 ->15 + NULL
   char wifi_security_type[10];   //// enum wifi_security_type{WEP, WPA, WPA2, WPA2E};
 
-  uint8_t   connection_retry;   //1
-  uint16_t  response_timeout;   //2seg
+  uint8_t   connection_retry;     //amount of retrials to connect in case of failure. (def:1).
+  uint32_t  connection_timeout;   //milliseconds to try connecting  (def:5000).
+  uint32_t  response_timeout;     //milliseconds to await response  (def:2000).
   // todo: evaluate which WPA2-Enterprise parameters are needed.
   
   uint16_t id_sensor_1;     //Parameters to put into POST request.
@@ -77,9 +79,7 @@ typedef struct{
   uint16_t id_sensor_4;
   uint16_t id_transceiver;    
 
-  uint8_t battery_level;
-
-  uint16_t  sample_time; // (seconds)
+  uint16_t  sample_time;    //lapse between measurements (in seconds)
 
 } Config_globals;
 
@@ -240,12 +240,12 @@ void loop() {
         Serial.printf("\n    Measurements read from RTC / amount=%d ", packets);
         archiveWrite(buf, sizeof(Measurement)*packets);   //Write data into archive (flash memory).
     
-        rtcmem.clearMeasurements();   //Clears rtc memory.
+        rtcmem.clearMeasurements();               //Clears rtc memory.
         rtcmem.saveMeasurements(&m, sizeof(m));   //Saves current measurement.
 
         statem.setState(STATE_TRANSMISSION);   //Transmit pending data.
       }
-
+      statem.setState(STATE_DEEP_SLEEP);    //Goes deep sleep...
     }
     
   }
@@ -267,14 +267,14 @@ void loop() {
       uint8 buf[576]; 
       // archiveRead(buf,rtcmem.rwVariables().archive_sent_pointer, rtcmem.rwVariables().archive_saved_pointer);
       archiveRead(buf,0,24);
-      generatePOSTRequest(buf, 2);
-      generatePOSTRequest(buf, 24);
+      // generatePOSTRequest(buf, 2);
+      // generatePOSTRequest(buf, 24);
 
+      sendMeasurements(generatePOSTRequest(buf, 2));
 
       rtcmem.var.archive_sent_pointer= 1;
       rtcmem.rwVariables();
 
-    
       statem.setState(STATE_DEEP_SLEEP);
     }
   }
@@ -679,7 +679,7 @@ String generatePOSTRequest( void* data, uint16_t packets){
     }
   }
   
-  request += "?id_transceiver=1";
+  request += "id_transceiver=1";      //? symbol deleted as it is not needed into POST method.
   request += "&battery_level="+(String)getBatteryLevel();
   request += "&timestamp="+   values_timestamp;
   request += "&id_sensor="+   values_id_sensor;
@@ -693,57 +693,70 @@ String generatePOSTRequest( void* data, uint16_t packets){
 }
 
 uint16_t sendMeasurements(String request){
+    uint32_t start_time = millis();
+    bool isconnected=false;
+
+    wifiTurnOn();
+    WiFiMulti.addAP(config_globals.server_ap_ssid, config_globals.server_ap_pass);  //Connects to WiFi network.
     
-
-    if ((WiFiMulti.run() == WL_CONNECTED)) {
-    Serial.printf("\nWiFi Connected!");
+    Serial.print("\nConnecting to server...\n ");
     
-    WiFiClient client;
-    HTTPClient http;
-    //Generate full URL.
-    String url = "http://"+(String)config_globals.local_ip+":"+(String)config_globals.server_port;
-    url+=SEND_MEASUREMENTS_URL+request;
-
-  
-    Serial.print("\n[HTTP] begin...\n");
-    if (http.begin(client, "http://192.168.0.172:8080/sendmeasurements")) { //Define if route should be defined here.
-      String request;
-
-      
-      //Send POST request
-      Serial.print("[HTTP] POST...:\n");
-      Serial.print(request);
-      int httpCode = http.POST( request );
-      //int httpCode = http.GET();
-
-      // httpCode will be negative on error
-      if (httpCode > 0) {
-        // HTTP header has been send and Server response header has been handled
-        Serial.printf("[HTTP] POST... code: %d\n", httpCode);
+    while(millis() - start_time <= config_globals.connection_timeout || isconnected){
+      yield();
+      if ((WiFiMulti.run() == WL_CONNECTED)) {
+        Serial.printf("\nWiFi Connected!");
+        isconnected=true; //Toggle flag.
         
-        // file found at server
-        if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
-          String payload = http.getString();
-          Serial.println(payload);
+        WiFiClient client;
+        HTTPClient http;
+
+        //Generate full URL.
+        String url = "http://"+(String)config_globals.server_ip+":"+(String)config_globals.server_port;
+        url+=SEND_MEASUREMENTS_URL;
+        // url+=request;
+        Serial.print("\n url: ");
+        Serial.println(url);
+      
+        Serial.print("\n[HTTP] begin...\n");
+        if (http.begin(client, url)) { //Define if route should be defined here.
+        
+          //Send POST request
+          Serial.print("[HTTP] POST...:\n");
+          Serial.print(request);
+          int httpCode = http.POST( request );
+          //int httpCode = http.GET();
+
+          // httpCode will be negative on error
+          if (httpCode > 0) {
+            // HTTP header has been send and Server response header has been handled
+            Serial.printf("[HTTP] POST... code: %d\n", httpCode);
+            
+            // file found at server
+            if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
+              String payload = http.getString();
+              Serial.println(payload);
+            }
+
+            goDeepSleep(60e6);  //Deep sleep for low power consumption.
+
+          } else {
+            Serial.printf("[HTTP] GET failed, error: %s\n", http.errorToString(httpCode).c_str());
+            goDeepSleep(60e6);
+          }
+          http.end();
+        } 
+        else {
+          Serial.printf("[HTTP] Unable to connect\n");
         }
-
-        goDeepSleep(60e6);  //Deep sleep for low power consumption.
-
-      } else {
-        Serial.printf("[HTTP] GET failed, error: %s\n", http.errorToString(httpCode).c_str());
-        goDeepSleep(60e6);
       }
-      http.end();
-    } 
-    else {
-      Serial.printf("[HTTP] Unable to connect\n");
-      goDeepSleep(60e6);  //Deep sleep for low power consumption.
     }
-  } 
 
-
-
-
+    wifiTurnOff();
+    
+    if(isconnected)
+      Serial.print("\n data sent.");
+    else
+      Serial.printf("\n Timeout: %dms. Unable to connect. data not sent.", (millis() - start_time));
 }
 
 uint32_t getServerTimeUnix(void){
@@ -832,7 +845,6 @@ void wifiTurnOn(void){
   delay(1);   //Necessary delay to settle.
   WiFi.mode(WIFI_STA);  // Bring up the WiFi connection.
   WiFi.persistent(false); //Wifi credentials loaded directly from flash (as specified below) and not overwritten to it.
-  WiFiMulti.addAP("Fibertel WiFi866 2.4GHz", "01416592736");
 }
 
 bool initglobals(void){
@@ -858,13 +870,16 @@ bool initglobals(void){
     // rwVariables();  //Stores read data to RTC memory.    ////////////////// REMOVED FOR TESTING ///////////
     return true;
   }
-  else{
+  else{     //Load default values.
     strcpy(config_globals.server_ap_ssid,"DATALOGGER SERVER");
     strcpy(config_globals.server_ap_pass,"!UBA12345!");
+    strcpy(config_globals.server_ip, "192.168.137.1");
     strcpy(config_globals.local_ip,"192.168.4.1");
     strcpy(config_globals.wifi_security_type,"WPA2");
 
+    config_globals.server_port=8080;
     config_globals.connection_retry=1;
+    config_globals.connection_timeout=5000;
     config_globals.response_timeout=2000;
     config_globals.id_transceiver=1;
     config_globals.id_sensor_1=1;

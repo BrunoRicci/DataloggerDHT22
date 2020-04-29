@@ -120,6 +120,7 @@ void RtcMemory::readData(int address, void *data, unsigned short int bytes) {
 void RtcMemory::writeData(int address, void* data, uint16_t bytes){
   //Writes data into rtc memory.
   system_rtc_mem_write(address, data, bytes);
+  yield();
 }
 
 uint8_t getPointer(void){
