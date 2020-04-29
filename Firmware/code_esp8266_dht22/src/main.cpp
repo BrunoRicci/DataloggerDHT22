@@ -95,62 +95,8 @@ void setup() {
   wifiTurnOff();
   Serial.begin(115200);
   initglobals();
-
-  Serial.printf("\n config_globals.id_sensor_1 =%d", config_globals.id_sensor_1);
-  Serial.printf("\n config_globals.id_sensor_2 =%d", config_globals.id_sensor_2);
-  Serial.printf("\n config_globals.local_ip =%s", config_globals.local_ip);
-  Serial.printf("\n config_globals.server_ap_ssid =%s", config_globals.server_ap_ssid);
-  Serial.printf("\n config_globals.server_ap_pass =%s", config_globals.server_ap_pass);
-  
   
   SPIFFS.begin();
-
-  // handleFormatFlash();  //FOR TESTING ONLY!
-  // handleFormatRam();
-
-//////////////////////////////////////////////////////////////
-
- 
-  
-/*   // DEBUG: Write arbitrary data to  RTC memory.
-      //Get measurements...
-    Measurement m;    
-    m.timestamp=1234567890+millis(); //Put current timestamp
-    m.id_sensor[0]=1;   
-    m.id_sensor[1]=2; 
-    m.id_sensor[2]=3; 
-    m.id_sensor[3]=4;
-    m.temperature[0]=190; 
-    m.temperature[1]=195;
-    m.temperature[2]=195;
-    m.temperature[3]=192;
-    m.humidity[0]=56; 
-    m.humidity[1]=54; 
-    m.humidity[2]=54; 
-    m.humidity[3]=52;  */
-    
-  //   //Save measurements into temporary memory.
-  //   if ( ! rtcmem.saveMeasurements(&m, sizeof(m))) //If data is not saved correctly in RAM...
-  //   {
-  //     Serial.printf(" \n -------- RTC memory full. Saving data to flash and clearing memory... --------");
-  //     /* save to flash, clear RAM and then rewrite to it */
-      
-  //     uint8 buf[(RTC_MEMORY_MEASUREMENTS_END_BLOCK - RTC_MEMORY_MEASUREMENTS_START_BLOCK)*4];   //Temporary buffer to read measurements
-  //     rtcmem.readData(RTC_MEMORY_MEASUREMENTS_START_BLOCK, &buf, (RTC_MEMORY_MEASUREMENTS_END_BLOCK - RTC_MEMORY_MEASUREMENTS_START_BLOCK)*4);
-
-  //     // writeDataToFlash(MEASUREMENTS_FILE_NAME, buf, sizeof(buf)); //Save measurements to flash.
-  //     archiveWrite(buf, sizeof(buf));
-  //     rtcmem.clearMeasurements();   //Clears rtc memory.
-
-  //     m.timestamp=millis();   //Put actual time for the moment the pending to store measurement is stored.
-  //     rtcmem.saveMeasurements(&m, sizeof(m));   //Saves current measurement.
-  
-  //   }
-
-  
-  
-  
-
 }
 
 
@@ -245,9 +191,10 @@ void loop() {
 
         statem.setState(STATE_TRANSMISSION);   //Transmit pending data.
       }
-      statem.setState(STATE_DEEP_SLEEP);    //Goes deep sleep...
+      else{
+        statem.setState(STATE_DEEP_SLEEP);    //Goes deep sleep...
+      }
     }
-    
   }
   else if (statem.getState() == STATE_SAVE_MEASUREMENTS){
     if(statem.stateInit()){
@@ -517,11 +464,11 @@ bool archiveWrite(void* data, uint16_t bytes){
   //Write "bytes" number of packets into the archive (flash memory).
   if(bytes >= RTC_MEMORY_MEASUREMENT_BLOCK_SIZE){
     
-    Serial.printf("\n\n Data to write to archive:\n  buf=");
-    for (uint16 i = 0; i < bytes; i++)
-    {
-      Serial.printf("%X ", ((const char*)data)[i]);
-    }
+    // Serial.printf("\n\n Data to write to archive:\n  buf=");
+    // for (uint16 i = 0; i < bytes; i++)
+    // {
+    //   Serial.printf("%X ", ((const char*)data)[i]);
+    // }
 
     File file = SPIFFS.open(MEASUREMENTS_FILE_NAME, "a"); //Opens archive file to append measurements.
       // file.size();
@@ -543,7 +490,6 @@ bool archiveWrite(void* data, uint16_t bytes){
     }
     else{        //If file is unable to open...
       Serial.println("Error opening file for writing");
-      
     }
   }
   return false;
@@ -569,13 +515,15 @@ bool archiveRead(void* data, uint32_t first_packet, uint32_t last_packet){
       { 
           file.seek(first_packet*sizeof(Measurement),
                     fs::SeekSet);    //Move the cursor to the first_packet position.
-          Serial.printf("archiveRead() first_packet: %d, last_packet: %d,   seek value:%d", first_packet, last_packet, first_packet*sizeof(Measurement));
-          Serial.printf("\nData read from archive:   (currpos = %d)\n", file.position());   //For debugging...
           
+          /////// DEBUG /////
+          // Serial.printf("archiveRead() first_packet: %d, last_packet: %d,   seek value:%d", first_packet, last_packet, first_packet*sizeof(Measurement));
+          // Serial.printf("\nData read from archive:   (currpos = %d)\n", file.position());   //For debugging...
+          ///////////////////
           for (uint32 i = 0; i < total_bytes; i++)    //Writes data output buffer
           {
             ((uint8_t*)data)[i] = file.read(); 
-            Serial.printf("%X ",((uint8_t*)data)[i]); //Prints file content.                //For debugging...  
+            // Serial.printf("%X ",((uint8_t*)data)[i]); //Prints file content.                //For debugging...  
           }
       }
       file.close();    //Close file.
