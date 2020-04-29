@@ -189,6 +189,7 @@ bool RtcMemory::initialize(void){
   else return false;
 }
 
+//Obsolete!
 bool RtcMemory::arrangeData(Measurement m, uint8_t* data){
   /*This method takes a packet of data read from rtc memory, extract all the members values
   inside of it (using the same struct type) and arrange them into a normalized 24B array.*/

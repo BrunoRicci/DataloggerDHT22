@@ -39,6 +39,8 @@ bool reedSwitchIsPressed(void);
 void* stringToArray(std::string origin_string);
 int32_t generateMeasurementValue(unsigned char type, float value);
 String formatMeasurementValue(unsigned char type, float value);  //Converts measurements into valid format
+String generatePOSTRequest( void* data, uint16_t packets);
+uint16_t sendMeasurements(String request);
 Measurement getMeasurements(void);
 uint32_t getServerTimeUnix(void);
 
@@ -59,14 +61,16 @@ unsigned char handleFormatFlash(void);
 //---------------------------------------------------------------------------------------------------------------------
 
 typedef struct{
-  char ap_ssid[31];
-  char ap_pass[31];   
+  char server_ap_ssid[31];
+  char server_ap_pass[31];   
+  uint16_t server_port;
   char local_ip[16];      //192.168.255.255 ->15 + NULL
+  char wifi_security_type[10];   //// enum wifi_security_type{WEP, WPA, WPA2, WPA2E};
+
   uint8_t   connection_retry;   //1
   uint16_t  response_timeout;   //2seg
   // todo: evaluate which WPA2-Enterprise parameters are needed.
-  uint8_t wifi_security_type;   //enum WPA, WPA2, WPA2 enterprise, etc.
-
+  
   uint16_t id_sensor_1;     //Parameters to put into POST request.
   uint16_t id_sensor_2;
   uint16_t id_sensor_3;
@@ -77,13 +81,13 @@ typedef struct{
 
   uint16_t  sample_time; // (seconds)
 
-} Globals;
+} Config_globals;
 
 ESP8266WiFiMulti WiFiMulti;             //Wifi client side handle.
 ESP8266WebServer server(8080);          //Server for configuration.
 StateMachine statem(STATE_WAKE);  //Create StateMachine class object. Starts at wake.
 RtcMemory rtcmem;                       //Object to handle rtc memory.
-Globals globals;
+Config_globals config_globals;
 
 
 void setup() {
@@ -91,6 +95,12 @@ void setup() {
   wifiTurnOff();
   Serial.begin(115200);
   initglobals();
+
+  Serial.printf("\n config_globals.id_sensor_1 =%d", config_globals.id_sensor_1);
+  Serial.printf("\n config_globals.id_sensor_2 =%d", config_globals.id_sensor_2);
+  Serial.printf("\n config_globals.local_ip =%s", config_globals.local_ip);
+  Serial.printf("\n config_globals.server_ap_ssid =%s", config_globals.server_ap_ssid);
+  Serial.printf("\n config_globals.server_ap_pass =%s", config_globals.server_ap_pass);
   
   
   SPIFFS.begin();
@@ -232,9 +242,10 @@ void loop() {
     
         rtcmem.clearMeasurements();   //Clears rtc memory.
         rtcmem.saveMeasurements(&m, sizeof(m));   //Saves current measurement.
+
+        statem.setState(STATE_TRANSMISSION);   //Transmit pending data.
       }
 
-      statem.setState(STATE_DEEP_SLEEP);
     }
     
   }
@@ -250,9 +261,21 @@ void loop() {
     if(statem.stateInit()){
       Serial.print("\n --- State: STATE_TRANSMISSION ---");
 
-      wifiTurnOn();
+      // wifiTurnOn(); 
 
 
+      uint8 buf[576]; 
+      // archiveRead(buf,rtcmem.rwVariables().archive_sent_pointer, rtcmem.rwVariables().archive_saved_pointer);
+      archiveRead(buf,0,24);
+      generatePOSTRequest(buf, 2);
+      generatePOSTRequest(buf, 24);
+
+
+      rtcmem.var.archive_sent_pointer= 1;
+      rtcmem.rwVariables();
+
+    
+      statem.setState(STATE_DEEP_SLEEP);
     }
   }
   else if (statem.getState() == STATE_FORCE_MEASUREMENT){
@@ -268,7 +291,6 @@ void loop() {
         /* save to flash, clear RAM and then rewrite to it */
         
         uint8 buf[288];   //Temporary buffer to read measurements.
-
         uint16_t packets = rtcmem.readMeasurements(buf);
         Serial.printf("\n    Measurements read from RTC / amount=%d ", packets);
         archiveWrite(buf, sizeof(Measurement)*packets);   //Write data into archive (flash memory).
@@ -289,10 +311,9 @@ void loop() {
         rtcmem.clearMeasurements();   //Clears rtc memory.
         rtcmem.saveMeasurements(&m, sizeof(m));   //Saves current measurement.
       }
-      // statem.setState(STATE_TRANSMISSION);   //Transmit pending data.
+      statem.setState(STATE_TRANSMISSION);   //Transmit pending data.
 
       
-      statem.setState(STATE_DEEP_SLEEP);
     }
   }
   else if (statem.getState() == STATE_CONFIGURATION){
@@ -322,7 +343,7 @@ void loop() {
       Serial.print("\n --- State: STATE_DEEP_SLEEP ---");
 
       Serial.printf("\nDevice's been running for %d ms.", millis());
-      goDeepSleep(30e6-millis());
+      goDeepSleep(60e6-millis());
     }
     
   }
@@ -539,7 +560,7 @@ bool archiveRead(void* data, uint32_t first_packet, uint32_t last_packet){
   
   uint32_t packet_amount = 1+(last_packet-first_packet);
   uint32_t total_bytes = packet_amount*RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*RTC_MEMORY_BLOCK_SIZE;
-  if ( first_packet >= 0 && last_packet >= 0 && (packet_amount >= 0))  //If packets indexes are valid...
+  if ( first_packet >= 0 && last_packet >= 0 && (packet_amount >= 0) && last_packet < archiveGetPointer())  //If packets indexes are valid...
   {
     File file = SPIFFS.open(MEASUREMENTS_FILE_NAME, "r");   //Open file
     if (file){        //If file opens correctly...
@@ -613,72 +634,121 @@ Measurement getMeasurements(void){
   return(m);
 }
 
-String generatePOSTRequest( uint16_t id_transceiver, uint8_t battery_level,   //Header elements
-                            uint32_t *timestamp,  //Array elements
-                            uint16_t *id_sensor,
-                            int16_t *temperature,
-                            uint32_t *humidity,
-                            uint8_t length        //Number of elements to be sent.
-                            ){
+String generatePOSTRequest( void* data, uint16_t packets){
   /*This function receives data saved to flash (array) and generates the POST request to send
     it to the server, which is returned.
     Necessary data:
-      -id_transceiver
-      -battery_level
-        -timestamp[]
-        -id_sensor[]
-        -temperature[]
-        -humidity[]
   */
+  
+  String request="";  //Initialize empty string.
+  String values_timestamp=  "[";
+  String values_id_sensor=  "[";
+  String values_temperature="[";
+  String values_humidity=   "[";
 
+  Measurement m;  //Temporary variable.
+  for (uint16_t p = 0; p < packets; p++){ //For each packet...
+    memcpy(&m, data+(p*sizeof(m)), sizeof(m));    //Copies one packet into the temporary memory.
 
-  String request = "";  //Initialize empty string.
+    for (uint8_t s = 0; s < DATALOGGER_SENSOR_COUNT; s++){ //For each sensor...
+      values_timestamp+= (String)m.timestamp;
+      values_id_sensor  +=(String)m.id_sensor[s];
+      values_temperature+=(String)m.temperature[s];
+      values_humidity   +=(String)m.humidity[s];
 
-  String aux_string;
-
-
-  //request= "t1=1&t2=2&t3=3&t4=4&h1=1&h2=2&h3=3&h4=4";
-      //formatMeasurementValue(TEMPERATURE, temperature[0]);
-
-       
-      request += "id_transceiver=1";
-      request += "battery_level=100";
-      request += "timestamp=[,,,,,,,]";
-      request += "id_sensor=[1,2,3,4,1,2,3,4]";
-      request += "temperature=[19.7,19.5,20.2,19.5,20.2,21.0,20.5,20.7]";
-      request += "humidity=[35,39,35,40,43,46,48,45]"; 
-      
-
-     /*  request+= "t1=";
-      request+= formatMeasurementValue(TEMPERATURE, dht22_sensor_1.readTemperature());
-      request+= "&t2=";
-      request+= formatMeasurementValue(TEMPERATURE, dht22_sensor_2.readTemperature());
-      request+= "&t3=";
-      request+= formatMeasurementValue(TEMPERATURE, dht22_sensor_3.readTemperature());
-      request+= "&t4=";
-      request+= formatMeasurementValue(TEMPERATURE, dht22_sensor_4.readTemperature());
-      request+= "&h1=";
-      request+= formatMeasurementValue(HUMIDITY, dht22_sensor_1.readHumidity());
-      request+= "&h2=";
-      request+= formatMeasurementValue(HUMIDITY, dht22_sensor_2.readHumidity());
-      request+= "&h3=";
-      request+= formatMeasurementValue(HUMIDITY, dht22_sensor_3.readHumidity());
-      request+= "&h4=";
-      request+= formatMeasurementValue(HUMIDITY, dht22_sensor_4.readHumidity());
-    */
-  // temperature_float[0] = dht22_sensor_1.readTemperature();
-  // temperature_float[1] = dht22_sensor_2.readTemperature();
-  // temperature_float[2] = dht22_sensor_3.readTemperature();
-  // temperature_float[3] = dht22_sensor_4.readTemperature();
-  // humidity_float[0] = dht22_sensor_1.readHumidity();
-  // humidity_float[1] = dht22_sensor_2.readHumidity();
-  // humidity_float[2] = dht22_sensor_3.readHumidity();
-  // humidity_float[3] = dht22_sensor_4.readHumidity();
+      if( p < packets-1){   //If it is not the last packet...
+          values_timestamp+=  ",";          
+          values_id_sensor+=  ",";
+          values_temperature+=",";
+          values_humidity+=   ",";
+      }
+      else{   //If it is the last element, closes the bracket.
+        if(s < DATALOGGER_SENSOR_COUNT - 1){
+          values_timestamp+=  ",";          
+          values_id_sensor+=  ",";
+          values_temperature+=",";
+          values_humidity+=   ",";
+        }  
+        else{
+          values_timestamp+=  "]";      
+          values_id_sensor+=  "]";      
+          values_temperature+="]";      
+          values_humidity+=   "]"; 
+        } 
+      }
+    }
+  }
+  
+  request += "?id_transceiver=1";
+  request += "&battery_level="+(String)getBatteryLevel();
+  request += "&timestamp="+   values_timestamp;
+  request += "&id_sensor="+   values_id_sensor;
+  request += "&temperature="+ values_temperature;
+  request += "&humidity="+    values_humidity; 
+  
+  Serial.print("\n Generated POST request: ");
+  Serial.println(request);  
+  
   return request;
+}
+
+uint16_t sendMeasurements(String request){
+    
+
+    if ((WiFiMulti.run() == WL_CONNECTED)) {
+    Serial.printf("\nWiFi Connected!");
+    
+    WiFiClient client;
+    HTTPClient http;
+    //Generate full URL.
+    String url = "http://"+(String)config_globals.local_ip+":"+(String)config_globals.server_port;
+    url+=SEND_MEASUREMENTS_URL+request;
+
+  
+    Serial.print("\n[HTTP] begin...\n");
+    if (http.begin(client, "http://192.168.0.172:8080/sendmeasurements")) { //Define if route should be defined here.
+      String request;
+
+      
+      //Send POST request
+      Serial.print("[HTTP] POST...:\n");
+      Serial.print(request);
+      int httpCode = http.POST( request );
+      //int httpCode = http.GET();
+
+      // httpCode will be negative on error
+      if (httpCode > 0) {
+        // HTTP header has been send and Server response header has been handled
+        Serial.printf("[HTTP] POST... code: %d\n", httpCode);
+        
+        // file found at server
+        if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
+          String payload = http.getString();
+          Serial.println(payload);
+        }
+
+        goDeepSleep(60e6);  //Deep sleep for low power consumption.
+
+      } else {
+        Serial.printf("[HTTP] GET failed, error: %s\n", http.errorToString(httpCode).c_str());
+        goDeepSleep(60e6);
+      }
+      http.end();
+    } 
+    else {
+      Serial.printf("[HTTP] Unable to connect\n");
+      goDeepSleep(60e6);  //Deep sleep for low power consumption.
+    }
+  } 
+
+
+
+
 }
 
 uint32_t getServerTimeUnix(void){
   //Cnnects to server, sends a request and returns unix time in UTC from server.
+  return 0;
 }
 
 int32_t generateMeasurementValue(unsigned char type, float value){
@@ -766,11 +836,44 @@ void wifiTurnOn(void){
 }
 
 bool initglobals(void){
-  /*  Read configuration file (JSON) and load data into Globals struct. 
+  /*  Read configuration file (JSON) and load data into Config_globals struct. 
   First load all the data from file into a string, and then parse it to a Json buffer,
   to then extract the values from each keyword.
   If file not found, load default values, defined in this function.
   */
+
+  void* p = &config_globals;
+  uint8_t buf[sizeof(Config_globals)]; //temporary buffer.
+
+  File file = SPIFFS.open(CONFIG_FILE_NAME, "r");   //Open file
+  if (file){        //If file opens correctly...
+     
+    Serial.print("\n  Config_globals: ");  
+    for (uint16_t i = 0; i < sizeof(buf); i++)
+    {
+      buf[i] = file.read(); //Copies the read byte 
+      Serial.printf("%X ",  buf[i]);
+    } 
+    memcpy(p, buf, sizeof(buf));  //Copies read data to the variable.
+    // rwVariables();  //Stores read data to RTC memory.    ////////////////// REMOVED FOR TESTING ///////////
+    return true;
+  }
+  else{
+    strcpy(config_globals.server_ap_ssid,"DATALOGGER SERVER");
+    strcpy(config_globals.server_ap_pass,"!UBA12345!");
+    strcpy(config_globals.local_ip,"192.168.4.1");
+    strcpy(config_globals.wifi_security_type,"WPA2");
+
+    config_globals.connection_retry=1;
+    config_globals.response_timeout=2000;
+    config_globals.id_transceiver=1;
+    config_globals.id_sensor_1=1;
+    config_globals.id_sensor_2=2;
+    config_globals.id_sensor_3=3;
+    config_globals.id_sensor_4=4;
+    config_globals.sample_time=3600;
+  }
+  return false;
 }
 
 //////////////////////////// WEB SERVER FUNCTIONS /////////////////////////////////
@@ -916,6 +1019,24 @@ bool handleChangeConfig(void){
     Also data should be validated from both browser (Javascript code) 
     and this function too, in order to avoid errors.
   */
+ 
+  void* p = &config_globals;
+
+  File file = SPIFFS.open(CONFIG_FILE_NAME, "w");
+  if (file) {       //If file opened correctly...
+
+      Serial.printf("\nglobals saved:");
+      for (uint16 i = 0; i < sizeof(config_globals); i++)
+      {
+        Serial.printf("%X ", ((const char*)p)[i]);
+      }
+
+      int bytesWritten = file.write((const char*)(p), sizeof(Variables)); //Overwrites previous data.
+      file.close();
+      return true;
+  }
+
+  return false;
 }
 
 /*

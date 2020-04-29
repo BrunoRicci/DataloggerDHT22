@@ -89,7 +89,6 @@ typedef struct{
 #define NVM_POINTERS_FILE_NAME          "variables.txt"
 
 //todo: MAKE DEFINE FOR MAXIMUM NUMBER OF PACKETS PER ARCHIVE READ AND WRITE OPERATION.
-
 /*---------------------------------------------------------*/
 
 #define STATE_SEALED            0         //State actually doesn't exist as it operates when device is not powered.
@@ -100,6 +99,10 @@ typedef struct{
 #define STATE_TRANSMISSION      5
 #define STATE_DEEP_SLEEP        6       //State to go right before deepSleep.
 #define STATE_FORCE_MEASUREMENT 7       //State to take measurement, force save to flash, and transmit to server.
+
+/*---------------------------------------------------------*/
+#define SEND_MEASUREMENTS_URL   "/sendmeasurements"
+
 
 
 #endif  //__DATALOGGER_CONFIG_HPP_INCLUDED__
