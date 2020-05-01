@@ -39,8 +39,8 @@ bool reedSwitchIsPressed(void);
 void* stringToArray(std::string origin_string);
 int32_t generateMeasurementValue(unsigned char type, float value);
 String formatMeasurementValue(unsigned char type, float value);  //Converts measurements into valid format
-String generatePOSTRequest( void* data, uint16_t packets);
-uint16_t sendMeasurements(String request);
+String generatePOSTRequest(void* data, uint16_t packets);
+uint16_t sendMeasurements(uint16_t packets = 0);
 Measurement getMeasurements(void);
 uint32_t getServerTimeUnix(void);
 
@@ -208,18 +208,17 @@ void loop() {
     if(statem.stateInit()){
       Serial.print("\n --- State: STATE_TRANSMISSION ---");
 
-      // wifiTurnOn(); 
-
-
-      uint8 buf[576]; 
-      // archiveRead(buf,rtcmem.rwVariables().archive_sent_pointer, rtcmem.rwVariables().archive_saved_pointer);
-      archiveRead(buf,0,24);
-      // generatePOSTRequest(buf, 2);
-      // generatePOSTRequest(buf, 24);
-
-      sendMeasurements(generatePOSTRequest(buf, 2));
-
-      rtcmem.var.archive_sent_pointer= 1;
+      uint8_t buf[576];
+      uint16_t packets;
+      packets = rtcmem.rwVariables().archive_saved_pointer - rtcmem.rwVariables().archive_sent_pointer;
+      // archiveRead(buf,rtcmem.rwVariables().archive_sent_pointer-1, rtcmem.rwVariables().archive_saved_pointer-1);
+      Serial.printf("\n\n archive_sent_pointer= %d", rtcmem.rwVariables().archive_sent_pointer-1);
+      Serial.printf("\n archive_saved_pointer= %d", rtcmem.rwVariables().archive_saved_pointer-1);
+      Serial.printf("\n packets pending: %d", packets);
+ 
+      
+      //Send pending measurements and increments the pointer by the amount of sent packets.
+      rtcmem.var.archive_sent_pointer += sendMeasurements();
       rtcmem.rwVariables();
 
       statem.setState(STATE_DEEP_SLEEP);
@@ -237,7 +236,7 @@ void loop() {
         Serial.printf(" \n -------- RTC memory full. Saving data to flash and clearing memory... --------");
         /* save to flash, clear RAM and then rewrite to it */
         
-        uint8 buf[288];   //Temporary buffer to read measurements.
+        uint8 buf[RTC_MEMORY_MEASUREMENTS_COUNT*sizeof(Measurement)];   //Temporary buffer to read measurements.
         uint16_t packets = rtcmem.readMeasurements(buf);
         Serial.printf("\n    Measurements read from RTC / amount=%d ", packets);
         archiveWrite(buf, sizeof(Measurement)*packets);   //Write data into archive (flash memory).
@@ -258,6 +257,7 @@ void loop() {
         rtcmem.clearMeasurements();   //Clears rtc memory.
         rtcmem.saveMeasurements(&m, sizeof(m));   //Saves current measurement.
       }
+
       statem.setState(STATE_TRANSMISSION);   //Transmit pending data.
 
       
@@ -294,10 +294,6 @@ void loop() {
     }
     
   }
-
-
-
-
 
 
   //Waits for WiFi connection
@@ -640,71 +636,107 @@ String generatePOSTRequest( void* data, uint16_t packets){
   return request;
 }
 
-uint16_t sendMeasurements(String request){
-    uint32_t start_time = millis();
-    bool isconnected=false;
+uint16_t sendMeasurements(uint16_t packets){
+  /*
+      This function takes data packets and sends them to the server.
+      "packets" default value is 0, so if not specified in function call, it will send all the
+      pending packets instead of the amount specified. 
+  */
+  uint32_t start_time = millis();
+  bool isconnected=false;
+  uint8_t buf[sizeof(Measurement) * MAX_PACKET_PER_REQUEST];    //Reserves temporary memory for data read from archive.
+  uint16_t start_packet, end_packet, total_packets, next_packet;
 
-    wifiTurnOn();
-    WiFiMulti.addAP(config_globals.server_ap_ssid, config_globals.server_ap_pass);  //Connects to WiFi network.
-    
-    Serial.print("\nConnecting to server...\n ");
-    
-    while(millis() - start_time <= config_globals.connection_timeout || isconnected){
-      yield();
-      if ((WiFiMulti.run() == WL_CONNECTED)) {
-        Serial.printf("\nWiFi Connected!");
-        isconnected=true; //Toggle flag.
-        
-        WiFiClient client;
-        HTTPClient http;
+  total_packets = rtcmem.rwVariables().archive_saved_pointer-1 - rtcmem.rwVariables().archive_sent_pointer-1;
+  start_packet = rtcmem.rwVariables().archive_sent_pointer-1;
+  
+  if(packets == 0 || packets >= total_packets){ //If not specified or wrongly specified...
+    packets = total_packets;  //Difference between saved pointer and sent pointer (maximum of packets).
+  }
+  end_packet = start_packet + packets;
 
-        //Generate full URL.
-        String url = "http://"+(String)config_globals.server_ip+":"+(String)config_globals.server_port;
-        url+=SEND_MEASUREMENTS_URL;
-        // url+=request;
-        Serial.print("\n url: ");
-        Serial.println(url);
+
+  wifiTurnOn();
+  Serial.setDebugOutput(true);
+  WiFiMulti.addAP(config_globals.server_ap_ssid, config_globals.server_ap_pass);  //Connects to WiFi network.
+  
+  Serial.print("\nConnecting to server...\n ");
+  while(millis() - start_time <= config_globals.connection_timeout || isconnected){
+    
+    if ((WiFiMulti.run() == WL_CONNECTED)) {
+      Serial.printf("\nWiFi Connected!");
+      isconnected=true; //Toggle flag.
       
-        Serial.print("\n[HTTP] begin...\n");
-        if (http.begin(client, url)) { //Define if route should be defined here.
-        
-          //Send POST request
-          Serial.print("[HTTP] POST...:\n");
-          Serial.print(request);
-          int httpCode = http.POST( request );
-          //int httpCode = http.GET();
+      WiFiClient client;
+      HTTPClient http;
 
-          // httpCode will be negative on error
-          if (httpCode > 0) {
+      //Generate full URL.
+      String url = "http://"+(String)config_globals.server_ip+":"+(String)config_globals.server_port;
+      url+=SEND_MEASUREMENTS_URL;
+      Serial.print("\n url: ");   Serial.println(url);
+
+      Serial.print("\n[HTTP] begin...\n");
+      if (http.begin(client, url)) {  //IF connected to server...
+        
+
+        next_packet = start_packet;
+        do{
+          
+          next_packet;
+        }while(next_packet > end_packet);
+
+
+
+        //For each request...
+        for (uint16_t p = start_packet; p < end_packet; p+=MAX_PACKET_PER_REQUEST)  //p should increase in terms of MAX_PACKET_PER_REQUEST!!!
+        { 
+          if(p >= end_packet)
+            p = end_packet;
+
+          archiveRead(buf, start_packet, start_packet+MAX_PACKET_PER_REQUEST);  //Read 24 measurements...
+          String request = generatePOSTRequest(buf, MAX_PACKET_PER_REQUEST);
+        
+        
+          Serial.print("[HTTP] POST...:\n");  Serial.print(request);
+          int httpCode = http.POST( request );    //Send POST request.
+
+          if (httpCode > 0) { // httpCode will be negative on error
             // HTTP header has been send and Server response header has been handled
             Serial.printf("[HTTP] POST... code: %d\n", httpCode);
             
             // file found at server
             if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
-              String payload = http.getString();
-              Serial.println(payload);
+              String payload = http.getString();  Serial.println(payload);
             }
-
-            goDeepSleep(60e6);  //Deep sleep for low power consumption.
-
-          } else {
+          } 
+          else{
             Serial.printf("[HTTP] GET failed, error: %s\n", http.errorToString(httpCode).c_str());
-            goDeepSleep(60e6);
           }
-          http.end();
-        } 
-        else {
-          Serial.printf("[HTTP] Unable to connect\n");
+        
         }
+        http.end();
+      } 
+      else {
+        Serial.printf("[HTTP] Unable to connect\n");
       }
+      break;    //Exit loop.
     }
+    yield();
+  }
 
-    wifiTurnOff();
-    
-    if(isconnected)
-      Serial.print("\n data sent.");
-    else
-      Serial.printf("\n Timeout: %dms. Unable to connect. data not sent.", (millis() - start_time));
+  wifiTurnOff();
+  // Serial.setDebugOutput(false);
+  
+  if(isconnected){
+    Serial.print("\n data sent.");
+    return true;
+  }
+  else{
+    Serial.print("\n Unable to connect. data not sent.");
+    return false;
+  }
+  
+  Serial.printf("\n Time taken: %dms.", (int)(millis() - start_time));
 }
 
 uint32_t getServerTimeUnix(void){
@@ -760,8 +792,7 @@ void goDeepSleep(uint64_t time){
   if(time > 3600000000 ) time = 3600000000;  //Maximum 1h (3600 sec).
   
   uint32_t t = time/1000000;
-  WiFi.disconnect(true);  //Turns off wifi module, so in the wake up it won't turn on automatically until required.
-  delay(1);
+ 
   rtcmem.setElapsedTime(t+(millis()/1000));
 
   Serial.printf("\nGoing deep sleep for %d seconds... ", (t));
@@ -783,7 +814,9 @@ void setSensorPower(unsigned char state){
 }
 
 void wifiTurnOff(void){
+  WiFi.disconnect(true);  //Turns off wifi module, so in the wake up it won't turn on automatically until required.
   WiFi.mode( WIFI_OFF );  //Wifi starts turned off after wake up, in order to save energy.
+  delay(1);
   WiFi.forceSleepBegin(); 
   delay(1);
 }
@@ -827,7 +860,7 @@ bool initglobals(void){
 
     config_globals.server_port=8080;
     config_globals.connection_retry=1;
-    config_globals.connection_timeout=5000;
+    config_globals.connection_timeout=10000;
     config_globals.response_timeout=2000;
     config_globals.id_transceiver=1;
     config_globals.id_sensor_1=1;
@@ -964,6 +997,8 @@ unsigned char handleFormatFlash(void){
   
   if(SPIFFS.remove(MEASUREMENTS_FILE_NAME)){    //Delete file.
     //SPIFFS.format();
+    SPIFFS.remove(NVM_POINTERS_FILE_NAME);    //Delete variables backup.
+    SPIFFS.remove(CONFIG_FILE_NAME);          //Delete 
     Serial.printf("\nFLASH Formatted.\n");
 
     rtcmem.clear();             //Write default values into rtc memory.

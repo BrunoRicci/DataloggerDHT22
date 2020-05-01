@@ -102,6 +102,7 @@ typedef struct{
 
 /*---------------------------------------------------------*/
 #define SEND_MEASUREMENTS_URL   "/sendmeasurements"
+#define MAX_PACKET_PER_REQUEST       24      //Maximum number of packets to send per request.
 
 
 
