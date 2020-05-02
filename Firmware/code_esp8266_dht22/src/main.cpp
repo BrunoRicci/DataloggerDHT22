@@ -98,6 +98,17 @@ void setup() {
   initglobals();
   
   SPIFFS.begin();
+
+   //Checks if device has lost power supply.
+  if(rtcmem.checkPowerdown()){
+    setBatteryState(ON);  //Connect battery.
+    if(rtcmem.initialize())  //Recovers variables
+      {Serial.print("\nDevice powered off. RTC memory recovered correctly.");
+    digitalWrite(15,HIGH);      //DEBUG.
+      }
+    else  
+    Serial.print("\n RTC memory recovery failed.");
+  }
 }
 
 
@@ -113,21 +124,10 @@ void loop() {
       wifiTurnOff();
       // if(checkBattery()){
       if(checkBattery()){ //If enough battery remaining...
-         //Checks if device has lost power supply.
-        if(rtcmem.checkPowerdown()){
-          setBatteryState(ON);  //Connect battery.
-          if(rtcmem.initialize())  //Recovers variables
-            Serial.print("\nDevice powered off. RTC memory recovered correctly.");
-          else  
-          Serial.print("\n RTC memory recovery failed.");
-        }
-        
         /*RTC and external interrupt are not differenced once 
         the device goes into deep sleep. It will always detect 
         as "RTC interrupt".*/
-        /*Use the previous detection mode (reedSwitchIsPressed())*/
 
-       
         if(reedSwitchIsPressed()){  //if external interrupt (switch was pressed)...
           Serial.print("\n\nExternal interrupt.");
           
@@ -219,9 +219,11 @@ void loop() {
  
       
       //Send pending measurements and increments the pointer by the amount of sent packets.
+      rtcmem.var.archive_saved_pointer = archiveGetPointer(); //Make sure that pointer is updated (if value lost due power failure).
       rtcmem.var.archive_sent_pointer += sendMeasurements(0, 12);
       rtcmem.rwVariables();
 
+      rtcmem.safeDisconnect();  //Save current values.
       statem.setState(STATE_DEEP_SLEEP);
     }
   }
@@ -710,7 +712,7 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
       }
       else if (conn_machine.getState() == 3){ //Send packets.
         
-        if(conn_machine.stateInit()){
+        if(conn_machine.stateInit()){/////////////////////// PUT TIMEOUT HERE AS WELL, it gets stuck when server won't respond.
           /*  uint16_t end_packet, s, e;
             s = start_packet;
             end_packet = start_packet + packets;

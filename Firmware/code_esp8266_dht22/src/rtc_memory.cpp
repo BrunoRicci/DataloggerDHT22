@@ -269,11 +269,11 @@ bool RtcMemory::recoverVariables(void){
   File file = SPIFFS.open(NVM_POINTERS_FILE_NAME, "r");   //Open file
   if (file){        //If file opens correctly...
      
-    Serial.print("\n   Recovered data: ");  
+    // Serial.print("\n   Recovered data: ");  
     for (uint16_t i = 0; i < sizeof(Variables); i++)
     {
       buf[i] = file.read(); //Copies the read byte 
-      Serial.printf("%X ",  buf[i]);
+      // Serial.printf("%X ",  buf[i]);
     } 
     memcpy(p, buf, sizeof(buf));  //Copies read data to the variable.
     // rwVariables();  //Stores read data to RTC memory.    ////////////////// REMOVED FOR TESTING ///////////
