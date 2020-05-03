@@ -718,21 +718,9 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
       else if (conn_machine.getState() == 3){ //Send packets.
         
         if(conn_machine.stateInit()){/////////////////////// PUT TIMEOUT HERE AS WELL, it gets stuck when server won't respond.
-          /*  uint16_t end_packet, s, e;
-            s = start_packet;
-            end_packet = start_packet + packets;
-            e = s + MAX_PACKET_PER_REQUEST;
-            while (e != end_packet){
-              if(e > end_packet)
-                e = end_packet;
-
-              archiveRead(buf, s, e);
-              e = s + MAX_PACKET_PER_REQUEST;   
-              s=e+1;  //Next initial packet is the last one +1.
-            } 
-          */
+         
           request_start_time = millis();
-          uint8_t retries = 0;
+          uint8_t request_retries = 0, connection_retries=0;
           uint16_t end_packet, i, n, pending_packets;
 
           if(packets == 0){ //Initialization of start and final packets index.
@@ -747,29 +735,31 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
 
           i = start_packet;
           n = MAX_PACKET_PER_REQUEST;
-          if(i+n > end_packet)    //Limit the amount of packets to read if there are less than the maximum.
+          if(i+n > end_packet){    //Limit the amount of packets to read if there are less than the maximum.
             n = end_packet-i; //Equals to pending packets.
+          }
 
+          //possibly the error is here... (in this while()).
+          /*Packets iteration is working fine, but when first request is sent and pointers ("i" and "n")
+            are updated and the loop starts again, it's not entering to it.
 
-//possibly the error is here... (in this while()).
-/*Packets iteration is working fine, but when first request is sent and pointers ("i" and "n")
-  are updated and the loop starts again, it's not entering to it.
+            check the first condition: i+n < end_packet.
+              In the last cycle (when n=0 as there is no pending packets)
+              the condition will be false, as i-0 = i => i = end_packet -> false.
 
-  check the first condition: i+n < end_packet.
-     In the last cycle (when n=0 as there is no pending packets)
-    the condition will be false, as i-0 = i => i = end_packet -> false.
+              -> The condition is wrong, it will never enter when i+n would happen to be equal to end_packet
+              in the first cycle...
 
-    -> The condition is wrong, it will never enter when i+n would happen to be equal to end_packet
-    in the first cycle...
+              in "logs 3.txt": it can be seen that in the last packet, the condition will be false, 
+              as i=168 and n=12, i+n = 180 -> false.
 
-    in "logs 3.txt": it can be seen that in the last packet, the condition will be false, 
-    as i=168 and n=12, i+n = 180 -> false.
-
-*/
-          while(i+n < end_packet && retries < config_globals.connection_retry){
+          */  
+          //While there are packets to be sent (n= number of packets)
+          while(n > 0  && sendpackets){
             //TX
             //await response, continue iterating if OK, or retry if not (increment retry counter)
             // iteration: i+=n;  //"i" is now the last read packet +1.
+            request_start_time=millis();
             Serial.printf("\nstart_packet=%d  /  end_packet=%d", start_packet, end_packet);
             Serial.printf("\nPacket iterator:\n i=%d  /  n=%d", i, n);
 
@@ -777,46 +767,68 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
 
             String request = generatePOSTRequest(buf, n); //Generate request with n elements.
             Serial.print("[HTTP] POST...:\n");  Serial.print(request);
-            int httpCode = http.POST( request );    //Send POST request.
+            
+            
+            //Must put a delay or a timeout await here. Server is taking a bit to respond.
+            while(millis()-request_start_time < config_globals.response_timeout && request_retries < config_globals.connection_retry){ 
+              //Try to send packets to server, will try until timeout or number of request_retries reach maximum.
+              int httpCode = http.POST( request );    //Send POST request.
+              Serial.printf("\n[HTTP] POST sent... response code: %d\n", httpCode);  //HTTP response...
 
-            if (httpCode > 0){  //If > 0, the server got the request and is sending this response code.
-              Serial.printf("\n[HTTP] POST... response code: %d\n", httpCode);  //HTTP response...
-              
-              if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY){
-                String payload = http.getString();  Serial.println(payload);
-                sent_packets_amount += n;
-
-                i += n;  //"i" is now the last read packet.
-                n = MAX_PACKET_PER_REQUEST;
-                if(i+n > end_packet)    //Limit the amount of packets to read if there are less than the maximum.
-                  n = end_packet-i; //equal n to que amount of pending packets.
+              if (httpCode > 0){  //If > 0, the server got the request and is sending this response code.
                 
-                Serial.printf("\n      DATA SENT. Packets pending: %d", end_packet-i);
-                Serial.printf("\n  Packets in next request: %d", n);
-                Serial.printf("\n  i=%d  /  n=%d", i, n);
+                if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY){
+                  request_start_time=millis();    //Reset time counter.
+                  request_retries=0;                      //Reset request_retries counter.
 
-                retries=0;
+                  String payload = http.getString();  Serial.println(payload);
+                  
+                  sent_packets_amount += n;   //Increase counter.
+
+                  i += n;  //"i" is now the last read packet.
+                  n = MAX_PACKET_PER_REQUEST;
+                  if(i+n > end_packet)    //Limit the amount of packets to read if there are less than the maximum.
+                    n = end_packet-i; //equal n to que amount of pending packets.
+                  
+                  Serial.printf("\n      DATA SENT. Packets pending: %d", end_packet-i);
+                  Serial.printf("\n  Packets in next request: %d", n);
+                  Serial.printf("\n  i=%d  /  n=%d", i, n);
+                }
+                else{
+                  request_retries++;
+                  Serial.printf("[HTTP] POST failed, error: %s\n", http.errorToString(httpCode).c_str());
+                }
               }
               else{
-                retries++;
-                Serial.printf("[HTTP] GET failed, error: %s\n", http.errorToString(httpCode).c_str());
-              }
+
+                  //  IT'S RETURNING CODE 11 -> TIMEOUT.
+                /*
+                  HTTPC_ERROR_CONNECTION_REFUSED  (-1)
+                  HTTPC_ERROR_SEND_HEADER_FAILED  (-2)
+                  HTTPC_ERROR_SEND_PAYLOAD_FAILED (-3)
+                  HTTPC_ERROR_NOT_CONNECTED       (-4)
+                  HTTPC_ERROR_CONNECTION_LOST     (-5)
+                  HTTPC_ERROR_NO_STREAM           (-6)
+                  HTTPC_ERROR_NO_HTTP_SERVER      (-7)
+                  HTTPC_ERROR_TOO_LESS_RAM        (-8)
+                  HTTPC_ERROR_ENCODING            (-9)
+                  HTTPC_ERROR_STREAM_WRITE        (-10)
+                  HTTPC_ERROR_READ_TIMEOUT        (-11)
+                */
+                //TEST CONNECTION!
+                request_retries++;
+                Serial.printf("\n Response not OK. code: %d\n isConnected():%d  /  http.connected():%d  / retries:%d", 
+                                                  httpCode,   WiFi.isConnected(),   http.connected(),     request_retries );
+                
+                }
+              if(request_retries >= config_globals.connection_retry)  //If maximum retries reached...
+                sendpackets = false;  //Stop sending packets.
+              yield();
             }
-            else
-              retries++;
-            yield();
           }
           sendpackets = false;
 
-
-          
-          
-
-         
-
-
-
-          http.end(); //See if this will kill the ongoing connection...
+          http.end(); //ends HTTP client.
         }
       }
       yield();  //yield in every loop...
@@ -828,8 +840,6 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
     wifiTurnOff();
     return 0;
   }
-  
-  // Serial.setDebugOutput(false);
   
   // Serial.printf("\n Time taken: %dms.", (int)(millis() - start_time));
 }
@@ -954,7 +964,7 @@ bool initglobals(void){
     strcpy(config_globals.wifi_security_type,"WPA2");
 
     config_globals.server_port=8080;
-    config_globals.connection_retry=1;
+    config_globals.connection_retry=2;
     config_globals.connection_timeout=10000;
     config_globals.server_connection_timeout=2000;
     config_globals.response_timeout=5000;
