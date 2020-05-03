@@ -210,17 +210,17 @@ void loop() {
       Serial.print("\n --- State: STATE_TRANSMISSION ---");
 
       uint8_t buf[576];
-      uint16_t packets;
-      packets = rtcmem.rwVariables().archive_saved_pointer - rtcmem.rwVariables().archive_sent_pointer;
+      uint16_t pending_packets;
+      pending_packets = rtcmem.rwVariables().archive_saved_pointer - rtcmem.rwVariables().archive_sent_pointer - 1;
       // archiveRead(buf,rtcmem.rwVariables().archive_sent_pointer-1, rtcmem.rwVariables().archive_saved_pointer-1);
       Serial.printf("\n\n archive_sent_pointer= %d", rtcmem.rwVariables().archive_sent_pointer);
       Serial.printf("\n archive_saved_pointer= %d", rtcmem.rwVariables().archive_saved_pointer);
-      Serial.printf("\n packets pending: %d", packets);
+      Serial.printf("\n packets pending: %d", pending_packets);
  
       
       //Send pending measurements and increments the pointer by the amount of sent packets.
       rtcmem.var.archive_saved_pointer = archiveGetPointer(); //Make sure that pointer is updated (if value lost due power failure).
-      rtcmem.var.archive_sent_pointer += sendMeasurements(0, 12);
+      rtcmem.var.archive_sent_pointer += sendMeasurements(rtcmem.rwVariables().archive_sent_pointer, 0);
       rtcmem.rwVariables();
 
       rtcmem.safeDisconnect();  //Save current values.
@@ -596,7 +596,7 @@ String generatePOSTRequest(void* data, uint16_t packets){
 
   Measurement m;  //Temporary variable.
   for (uint16_t p = 0; p < packets; p++){ //For each packet...
-    memcpy(&m, data+(p*sizeof(m)), sizeof(m));    //Copies one packet into the temporary memory.
+    memcpy(&m, data+(p * sizeof(m)), sizeof(m));    //Copies one packet into the temporary memory.
 
     for (uint8_t s = 0; s < DATALOGGER_SENSOR_COUNT; s++){ //For each sensor...
       values_timestamp+= (String)m.timestamp;
@@ -652,7 +652,7 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
   
 
   //If won't exceed the maximum and the amount is not 0...
-  if( start_packet+packets < rtcmem.rwVariables().archive_saved_pointer && packets != 0){
+  if( start_packet+packets < rtcmem.rwVariables().archive_saved_pointer){
     
     StateMachine conn_machine(1);
     bool sendpackets=true;
@@ -661,6 +661,7 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
     WiFiClient client;
     HTTPClient http;
     uint8_t buf[sizeof(Measurement)*MAX_PACKET_PER_REQUEST];
+    uint16_t sent_packets_amount=0;
     //Generate full URL.
     String url = "http://"+(String)config_globals.server_ip+":"+(String)config_globals.server_port;
     url+=SEND_MEASUREMENTS_URL;
@@ -695,13 +696,17 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
       }
       else if (conn_machine.getState() == 2){ //Server connection...
         if(conn_machine.stateInit()){
-          Serial.print("\n[HTTP] begin...\n");
+          Serial.print("\nConnecting to server...\n");
           server_start_time = millis();      //Start counting for request timeout...
         }
           //here's the problem.
         if( (millis() - server_start_time) < config_globals.response_timeout ){  //If server connection doesn't timeout...
           if (http.begin(client, url)){
             conn_machine.setState(3);     //Goes to send packets state...
+          }
+          else{
+            Serial.print(".");
+            delay(10);
           }
         }
         else{
@@ -726,45 +731,104 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
               s=e+1;  //Next initial packet is the last one +1.
             } 
           */
-          
-          archiveRead(buf, 0, 24);
+          request_start_time = millis();
+          uint8_t retries = 0;
+          uint16_t end_packet, i, n, pending_packets;
 
-          String request = generatePOSTRequest(buf, 24);
-          
-          Serial.print("[HTTP] POST...:\n");  Serial.print(request);
-          int httpCode = http.POST( request );    //Send POST request.
-
-          if (httpCode > 0){ // httpCode will be negative on error
-            // HTTP header has been send and Server response header has been handled
-            Serial.printf("[HTTP] POST... code: %d\n", httpCode);
-            
-            if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
-              String payload = http.getString();  Serial.println(payload);
-              
-              Serial.print("\n      DATA SENT.     ");
-              rtcmem.var.archive_sent_pointer+=24;
-              rtcmem.rwVariables();
-
-              sendpackets = false;
-
-            }
-            else{
-              Serial.printf("[HTTP] GET failed, error: %s\n", http.errorToString(httpCode).c_str());
-            }
-            
+          if(packets == 0){ //Initialization of start and final packets index.
+            start_packet = rtcmem.rwVariables().archive_sent_pointer; //The last sent packet following one.
+            end_packet = rtcmem.rwVariables().archive_saved_pointer-1;    //The last saved packet into archive (maximum).
           }
+          else{ 
+            end_packet = start_packet + packets;
+            if(end_packet > rtcmem.rwVariables().archive_saved_pointer-1)
+              end_packet = rtcmem.rwVariables().archive_saved_pointer-1;
+          }
+
+          i = start_packet;
+          n = MAX_PACKET_PER_REQUEST;
+          if(i+n > end_packet)    //Limit the amount of packets to read if there are less than the maximum.
+            n = end_packet-i; //Equals to pending packets.
+
+
+//possibly the error is here... (in this while()).
+/*Packets iteration is working fine, but when first request is sent and pointers ("i" and "n")
+  are updated and the loop starts again, it's not entering to it.
+
+  check the first condition: i+n < end_packet.
+     In the last cycle (when n=0 as there is no pending packets)
+    the condition will be false, as i-0 = i => i = end_packet -> false.
+
+    -> The condition is wrong, it will never enter when i+n would happen to be equal to end_packet
+    in the first cycle...
+
+    in "logs 3.txt": it can be seen that in the last packet, the condition will be false, 
+    as i=168 and n=12, i+n = 180 -> false.
+
+*/
+          while(i+n < end_packet && retries < config_globals.connection_retry){
+            //TX
+            //await response, continue iterating if OK, or retry if not (increment retry counter)
+            // iteration: i+=n;  //"i" is now the last read packet +1.
+            Serial.printf("\nstart_packet=%d  /  end_packet=%d", start_packet, end_packet);
+            Serial.printf("\nPacket iterator:\n i=%d  /  n=%d", i, n);
+
+            archiveRead(buf, i, n); //Read "n" packets starting from packet number "i"
+
+            String request = generatePOSTRequest(buf, n); //Generate request with n elements.
+            Serial.print("[HTTP] POST...:\n");  Serial.print(request);
+            int httpCode = http.POST( request );    //Send POST request.
+
+            if (httpCode > 0){  //If > 0, the server got the request and is sending this response code.
+              Serial.printf("\n[HTTP] POST... response code: %d\n", httpCode);  //HTTP response...
+              
+              if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY){
+                String payload = http.getString();  Serial.println(payload);
+                sent_packets_amount += n;
+
+                i += n;  //"i" is now the last read packet.
+                n = MAX_PACKET_PER_REQUEST;
+                if(i+n > end_packet)    //Limit the amount of packets to read if there are less than the maximum.
+                  n = end_packet-i; //equal n to que amount of pending packets.
+                
+                Serial.printf("\n      DATA SENT. Packets pending: %d", end_packet-i);
+                Serial.printf("\n  Packets in next request: %d", n);
+                Serial.printf("\n  i=%d  /  n=%d", i, n);
+
+                retries=0;
+              }
+              else{
+                retries++;
+                Serial.printf("[HTTP] GET failed, error: %s\n", http.errorToString(httpCode).c_str());
+              }
+            }
+            else
+              retries++;
+            yield();
+          }
+          sendpackets = false;
+
+
+          
+          
+
+         
+
+
+
           http.end(); //See if this will kill the ongoing connection...
         }
       }
       yield();  //yield in every loop...
     }
     wifiTurnOff();  //Turn wifi off after sending all the packets.
+    return sent_packets_amount;
   } 
   else{
     wifiTurnOff();
     return 0;
   }
-
+  
   // Serial.setDebugOutput(false);
   
   // Serial.printf("\n Time taken: %dms.", (int)(millis() - start_time));
@@ -893,7 +957,7 @@ bool initglobals(void){
     config_globals.connection_retry=1;
     config_globals.connection_timeout=10000;
     config_globals.server_connection_timeout=2000;
-    config_globals.response_timeout=2000;
+    config_globals.response_timeout=5000;
     config_globals.id_transceiver=1;
     config_globals.id_sensor_1=1;
     config_globals.id_sensor_2=2;
@@ -1061,7 +1125,7 @@ bool handleChangeConfig(void){
         Serial.printf("%X ", ((const char*)p)[i]);
       }
 
-      int bytesWritten = file.write((const char*)(p), sizeof(Variables)); //Overwrites previous data.
+      file.write((const char*)(p), sizeof(Variables)); //Overwrites previous data.
       file.close();
       return true;
   }

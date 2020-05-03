@@ -39,9 +39,9 @@ bool RtcMemory::saveMeasurements(void *data, unsigned short int bytes){
     system_rtc_mem_write(pointer_obtained_measurement,data,bytes);  //Writes measurements in the position the pointer is indexing.
     buffer[0] = pointer_obtained_measurement+RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
     system_rtc_mem_write(RTC_MEMORY_MEASUREMENTS_POINTER_BLOCK,buffer,RTC_MEMORY_BLOCK_SIZE); //Updates the pointer position.
-    
-    var.measurements_pointer += RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;
-    rwVariables();
+    var.measurements_pointer = pointer_obtained_measurement+RTC_MEMORY_MEASUREMENT_BLOCK_SIZE;  //Update pointer position
+    rwVariables();  //Save to memory.
+     
 
     ////////////////////////////  DEBUG  //////////////////////////////////
     Serial.printf("\nData written to RTC memory:  ");
