@@ -220,6 +220,7 @@ void loop() {
       
       //Send pending measurements and increments the pointer by the amount of sent packets.
       rtcmem.var.archive_saved_pointer = archiveGetPointer(); //Make sure that pointer is updated (if value lost due power failure).
+      Serial.print("\n Starting to send packets...");
       rtcmem.var.archive_sent_pointer += sendMeasurements(rtcmem.rwVariables().archive_sent_pointer, 0);
       rtcmem.rwVariables();
 
@@ -646,12 +647,102 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
       "packets" default value is 0, so if not specified in function call, it will send all the
       pending packets instead of the amount specified. 
   */
+  HTTPClient http;
 
-  uint32_t start_time = millis(); //Saves start time.
-  uint32_t connection_start_time, server_start_time, request_start_time;
+  uint16_t start_connection_time, start_request_time;
+  uint8_t connection_retries=0, request_retries=0;
+  bool connection_timeout=false, request_timeout=false;
+  uint16_t sent_packets_amount = 0;
+
+  wifiTurnOn(); //Turn on wifi.
+  Serial.setDebugOutput(true);  //DEBUG
+  WiFi.begin(config_globals.server_ap_ssid, config_globals.server_ap_pass);
   
+  Serial.print("\nConnecting to network...");
+  start_connection_time = millis();
+  while(WiFi.status() != WL_CONNECTED && (millis() - start_connection_time < config_globals.connection_timeout)){ //Blocks until Wifi is connected. 
+    yield(); 
+  }
 
-  //If won't exceed the maximum and the amount is not 0...
+  if(WiFi.status() == WL_CONNECTED){
+    
+    uint8_t buf[MAX_PACKET_PER_REQUEST*sizeof(Measurement)]; //288 bytes.
+    //Generate full URL.
+    String url = "http://"+(String)config_globals.server_ip+":"+(String)config_globals.server_port;
+    url+=SEND_MEASUREMENTS_URL;
+    Serial.print("\n url: ");   Serial.println(url);
+
+        
+    Serial.printf("\n HTTP client started: %d",  http.begin(url));   //Specify request destination
+
+    uint16_t end_packet, i, n, pending_packets;
+
+    if(packets == 0){ //Initialization of start and final packets index.
+      start_packet = rtcmem.rwVariables().archive_sent_pointer; //The last sent packet following one.
+      end_packet = rtcmem.rwVariables().archive_saved_pointer-1;    //The last saved packet into archive (maximum).
+    }
+    else{ 
+      end_packet = start_packet + packets;
+      if(end_packet > rtcmem.rwVariables().archive_saved_pointer-1)
+        end_packet = rtcmem.rwVariables().archive_saved_pointer-1;
+    }
+    i = start_packet;
+    n = MAX_PACKET_PER_REQUEST;
+    if(i+n > end_packet){    //Limit the amount of packets to read if there are less than the maximum.
+      n = end_packet-i; //Equals to pending packets.
+    }
+    
+    while(n > 0 && request_retries < config_globals.connection_retry){   //While there are pending packets...
+      
+      archiveRead(buf, i,n); //Read "n" packets starting from packet number "i"
+
+      String request = generatePOSTRequest(buf, n); //Generate request with n elements.
+      Serial.print("\n[HTTP] POST...:\n");  Serial.print(request);
+
+      http.addHeader("Content-Type", "text/plain");  //Specify content-type header
+      int httpCode = http.POST(request);   //Send the request
+      if(httpCode > 0){
+        String payload = http.getString();  
+        Serial.print("\n Response:"); Serial.println(payload);  
+
+        i += n;  //"i" is now the last read packet.
+        n = MAX_PACKET_PER_REQUEST;
+        if(i+n > end_packet)    //Limit the amount of packets to read if there are less than the maximum.
+          n = end_packet-i; //equal n to que amount of pending packets.
+        
+        Serial.printf("\n      DATA SENT. Packets pending: %d", end_packet-i);
+        Serial.printf("\n  Packets in next request: %d", n);
+        Serial.printf("\n  i=%d  /  n=%d", i, n);
+        
+        sent_packets_amount += n;   //Increase counter.
+      }
+      else{
+        Serial.printf("\n Error. Response code:%d", httpCode);
+        Serial.printf("\n HTTP client started: %d",  http.begin(url));   //Specify request destination
+        request_retries++;
+      }
+      // yield();
+    }
+
+    
+
+
+
+
+
+    wifiTurnOff();
+    return sent_packets_amount;
+  }
+  else{
+    Serial.print("\nConnection timeout.");
+    //Connection failed.
+  }
+
+  // while((millis(- ))< config_globals.timeout && retries){
+  // }
+
+
+  /* //If won't exceed the maximum and the amount is not 0...
   if( start_packet+packets < rtcmem.rwVariables().archive_saved_pointer){
     
     StateMachine conn_machine(1);
@@ -740,7 +831,7 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
           }
 
           //possibly the error is here... (in this while()).
-          /*Packets iteration is working fine, but when first request is sent and pointers ("i" and "n")
+          //Packets iteration is working fine, but when first request is sent and pointers ("i" and "n")
             are updated and the loop starts again, it's not entering to it.
 
             check the first condition: i+n < end_packet.
@@ -753,7 +844,7 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
               in "logs 3.txt": it can be seen that in the last packet, the condition will be false, 
               as i=168 and n=12, i+n = 180 -> false.
 
-          */  
+           
           //While there are packets to be sent (n= number of packets)
           while(n > 0  && sendpackets){
             //TX
@@ -802,19 +893,19 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
               else{
 
                   //  IT'S RETURNING CODE 11 -> TIMEOUT.
-                /*
-                  HTTPC_ERROR_CONNECTION_REFUSED  (-1)
-                  HTTPC_ERROR_SEND_HEADER_FAILED  (-2)
-                  HTTPC_ERROR_SEND_PAYLOAD_FAILED (-3)
-                  HTTPC_ERROR_NOT_CONNECTED       (-4)
-                  HTTPC_ERROR_CONNECTION_LOST     (-5)
-                  HTTPC_ERROR_NO_STREAM           (-6)
-                  HTTPC_ERROR_NO_HTTP_SERVER      (-7)
-                  HTTPC_ERROR_TOO_LESS_RAM        (-8)
-                  HTTPC_ERROR_ENCODING            (-9)
-                  HTTPC_ERROR_STREAM_WRITE        (-10)
-                  HTTPC_ERROR_READ_TIMEOUT        (-11)
-                */
+                
+                  // HTTPC_ERROR_CONNECTION_REFUSED  (-1)
+                  // HTTPC_ERROR_SEND_HEADER_FAILED  (-2)
+                  // HTTPC_ERROR_SEND_PAYLOAD_FAILED (-3)
+                  // HTTPC_ERROR_NOT_CONNECTED       (-4)
+                  // HTTPC_ERROR_CONNECTION_LOST     (-5)
+                  // HTTPC_ERROR_NO_STREAM           (-6)
+                  // HTTPC_ERROR_NO_HTTP_SERVER      (-7)
+                  // HTTPC_ERROR_TOO_LESS_RAM        (-8)
+                  // HTTPC_ERROR_ENCODING            (-9)
+                  // HTTPC_ERROR_STREAM_WRITE        (-10)
+                  // HTTPC_ERROR_READ_TIMEOUT        (-11)
+               
                 //TEST CONNECTION!
                 request_retries++;
                 Serial.printf("\n Response not OK. code: %d\n isConnected():%d  /  http.connected():%d  / retries:%d", 
@@ -841,7 +932,7 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
     return 0;
   }
   
-  // Serial.printf("\n Time taken: %dms.", (int)(millis() - start_time));
+  // Serial.printf("\n Time taken: %dms.", (int)(millis() - start_time)); */
 }
 
 uint32_t getServerTimeUnix(void){
@@ -957,15 +1048,18 @@ bool initglobals(void){
     return true;
   }
   else{     //Load default values.
-    strcpy(config_globals.server_ap_ssid,"DATALOGGER SERVER");
-    strcpy(config_globals.server_ap_pass,"!UBA12345!");
-    strcpy(config_globals.server_ip, "192.168.137.1");
+    // strcpy(config_globals.server_ap_ssid,"DATALOGGER SERVER");
+    // strcpy(config_globals.server_ap_pass,"!UBA12345!");
+    // strcpy(config_globals.server_ip, "192.168.137.1");
+    strcpy(config_globals.server_ap_ssid,"Fibertel WiFi866 2.4GHz");
+    strcpy(config_globals.server_ap_pass,"01416592736");
+    strcpy(config_globals.server_ip, "192.168.0.172");
     strcpy(config_globals.local_ip,"192.168.4.1");
     strcpy(config_globals.wifi_security_type,"WPA2");
 
     config_globals.server_port=8080;
     config_globals.connection_retry=2;
-    config_globals.connection_timeout=10000;
+    config_globals.connection_timeout=20000;
     config_globals.server_connection_timeout=2000;
     config_globals.response_timeout=5000;
     config_globals.id_transceiver=1;
