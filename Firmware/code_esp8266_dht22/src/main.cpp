@@ -1,11 +1,11 @@
 #include <Arduino.h>
-#include <ArduinoJson.h>
 #include <time.h>
 
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
+#include <TimeLib.h>
 
 #include <datalogger_config.h>  //Configuration parameters.
 
@@ -120,13 +120,21 @@ void loop() {
   if(statem.getState() == STATE_WAKE){
     
     if(statem.stateInit()){ //State initialization.
-       Serial.print("\n --- State: STATE_WAKE ---");
+      Serial.print("\n --- State: STATE_WAKE ---");
       wifiTurnOff();
-      // if(checkBattery()){
+      digitalWrite(15,HIGH);      //DEBUG.
       if(checkBattery()){ //If enough battery remaining...
         /*RTC and external interrupt are not differenced once 
         the device goes into deep sleep. It will always detect 
         as "RTC interrupt".*/
+
+        //Transmission should be controlled by time, not by rtc memory being filled... -> CHANGED!!
+        setTime(rtcmem.rwVariables().current_time);
+        Serial.print("\nTime now:");
+        Serial.printf("\n   %2d:%2d:%2d", hour(), minute(), second());
+        Serial.printf("\n    %2d/%2d/%4d", day(), month(), year());
+
+
 
         if(reedSwitchIsPressed()){  //if external interrupt (switch was pressed)...
           Serial.print("\n\nExternal interrupt.");
@@ -184,17 +192,15 @@ void loop() {
         uint8 buf[288];   //Temporary buffer to read measurements.
 
         uint16_t packets = rtcmem.readMeasurements(buf);
-        Serial.printf("\n    Measurements read from RTC / amount=%d ", packets);
         archiveWrite(buf, sizeof(Measurement)*packets);   //Write data into archive (flash memory).
     
         rtcmem.clearMeasurements();               //Clears rtc memory.
         rtcmem.saveMeasurements(&m, sizeof(m));   //Saves current measurement.
 
-        statem.setState(STATE_TRANSMISSION);   //Transmit pending data.
+        // statem.setState(STATE_TRANSMISSION);   //Transmit pending data.
       }
-      else{
-        statem.setState(STATE_DEEP_SLEEP);    //Goes deep sleep...
-      }
+  
+      statem.setState(STATE_DEEP_SLEEP);    //Goes deep sleep...
     }
   }
   else if (statem.getState() == STATE_SAVE_MEASUREMENTS){
@@ -240,7 +246,6 @@ void loop() {
       
       packets = rtcmem.readMeasurements(buf); //Read all the measurements stored into RTC memory.
       
-      Serial.printf("\n    Measurements read from RTC / amount=%d ", packets);
       archiveWrite(buf, sizeof(Measurement)*packets);   //Write data into archive (flash memory).
       archiveWrite(&m, sizeof(Measurement));    //Write last measurement
       rtcmem.clearMeasurements();   //Clears rtc memory.
@@ -632,7 +637,6 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
       pending packets instead of the amount specified. 
   */
   HTTPClient http;
-
   uint16_t start_connection_time, start_request_time;
   uint8_t connection_retries=0, request_retries=0;
   bool connection_timeout=false, request_timeout=false;
@@ -656,7 +660,6 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
     url+=SEND_MEASUREMENTS_URL;
     Serial.print("\n url: ");   Serial.println(url);
 
-        
     Serial.printf("\n HTTP client started: %d",  http.begin(url));   //Specify request destination
 
     uint16_t end_packet, i, n, pending_packets;
@@ -688,6 +691,7 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
       if(httpCode > 0){
         String payload = http.getString();  
         Serial.print("\n Response:"); Serial.println(payload);  
+        http.end(); //for test.
 
         sent_packets_amount += n;   //Increase sent packets counter.
 
@@ -708,7 +712,25 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
       }
       yield();
     }
-
+    
+    //Get current time.
+    url = "http://"+(String)config_globals.server_ip+":"+(String)config_globals.server_port;
+    url+=GET_TIME_URL;
+    Serial.print("\n url: ");   Serial.println(url);
+    http.begin(url);
+    if(http.GET() > 0){   //If return code is valid
+      String payload = http.getString();
+      payload = payload.substring(payload.indexOf("\n")+1); //Get only the numeric value.
+      rtcmem.var.current_time = payload.toInt();
+      rtcmem.var.last_sync_time = rtcmem.var.current_time;
+      rtcmem.rwVariables();
+      
+      Serial.printf("\n UTC time from server: %d\n", rtcmem.rwVariables().last_sync_time);
+    }
+    else
+      Serial.print("\nUnable to obtain time.");
+    
+    http.end();
     wifiTurnOff();
     return sent_packets_amount;
   }
@@ -719,204 +741,11 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
     //Connection failed.
   }
 
-  // while((millis(- ))< config_globals.timeout && retries){
-  // }
 
-
-  /* //If won't exceed the maximum and the amount is not 0...
-  if( start_packet+packets < rtcmem.rwVariables().archive_saved_pointer){
-    
-    StateMachine conn_machine(1);
-    bool sendpackets=true;
-    bool isconnected=false;
-
-    WiFiClient client;
-    HTTPClient http;
-    uint8_t buf[sizeof(Measurement)*MAX_PACKET_PER_REQUEST];
-    uint16_t sent_packets_amount=0;
-    //Generate full URL.
-    String url = "http://"+(String)config_globals.server_ip+":"+(String)config_globals.server_port;
-    url+=SEND_MEASUREMENTS_URL;
-    Serial.print("\n url: ");   Serial.println(url);
-
-    while(sendpackets){
-
-      if (conn_machine.getState() == 1){    //Network connection...
-        if(conn_machine.stateInit()){
-          sendpackets = true;
-          wifiTurnOn();                     //Turn wifi on.
-          Serial.setDebugOutput(true);  //DEBUG
-          WiFiMulti.addAP(config_globals.server_ap_ssid, config_globals.server_ap_pass);  //Connects to WiFi network.
-          connection_start_time=millis();               //Start counting for network connection timeout.
-          Serial.print("\nConnecting to network...\n ");
-        }
-
-        if( (millis() - connection_start_time) < config_globals.connection_timeout ){  //If not timed out...
-          if ((WiFiMulti.run() == WL_CONNECTED)){   //Checks if connection successful.
-            Serial.printf("\nWiFi Connected!");
-            isconnected=true; //Toggle flag.
-            conn_machine.setState(2);   //Goes to server connection.
-          }
-        }
-        else{
-          //Notice timeout
-          Serial.print("\n Unable to connect to network. data not sent.");
-          sendpackets = false;  //break loop.
-        }
-        
-        
-      }
-      else if (conn_machine.getState() == 2){ //Server connection...
-        if(conn_machine.stateInit()){
-          Serial.print("\nConnecting to server...\n");
-          server_start_time = millis();      //Start counting for request timeout...
-        }
-          //here's the problem.
-        if( (millis() - server_start_time) < config_globals.response_timeout ){  //If server connection doesn't timeout...
-          if (http.begin(client, url)){
-            conn_machine.setState(3);     //Goes to send packets state...
-          }
-          else{
-            Serial.print(".");
-            delay(10);
-          }
-        }
-        else{
-          //Notice timeout
-          Serial.print("\n Unable to find server. data not sent.");
-          sendpackets = false;  //break loop.
-        }
-      }
-      else if (conn_machine.getState() == 3){ //Send packets.
-        
-        if(conn_machine.stateInit()){/////////////////////// PUT TIMEOUT HERE AS WELL, it gets stuck when server won't respond.
-         
-          request_start_time = millis();
-          uint8_t request_retries = 0, connection_retries=0;
-          uint16_t end_packet, i, n, pending_packets;
-
-          if(packets == 0){ //Initialization of start and final packets index.
-            start_packet = rtcmem.rwVariables().archive_sent_pointer; //The last sent packet following one.
-            end_packet = rtcmem.rwVariables().archive_saved_pointer-1;    //The last saved packet into archive (maximum).
-          }
-          else{ 
-            end_packet = start_packet + packets;
-            if(end_packet > rtcmem.rwVariables().archive_saved_pointer-1)
-              end_packet = rtcmem.rwVariables().archive_saved_pointer-1;
-          }
-
-          i = start_packet;
-          n = MAX_PACKET_PER_REQUEST;
-          if(i+n > end_packet){    //Limit the amount of packets to read if there are less than the maximum.
-            n = end_packet-i; //Equals to pending packets.
-          }
-
-          //possibly the error is here... (in this while()).
-          //Packets iteration is working fine, but when first request is sent and pointers ("i" and "n")
-            are updated and the loop starts again, it's not entering to it.
-
-            check the first condition: i+n < end_packet.
-              In the last cycle (when n=0 as there is no pending packets)
-              the condition will be false, as i-0 = i => i = end_packet -> false.
-
-              -> The condition is wrong, it will never enter when i+n would happen to be equal to end_packet
-              in the first cycle...
-
-              in "logs 3.txt": it can be seen that in the last packet, the condition will be false, 
-              as i=168 and n=12, i+n = 180 -> false.
-
-           
-          //While there are packets to be sent (n= number of packets)
-          while(n > 0  && sendpackets){
-            //TX
-            //await response, continue iterating if OK, or retry if not (increment retry counter)
-            // iteration: i+=n;  //"i" is now the last read packet +1.
-            request_start_time=millis();
-            Serial.printf("\nstart_packet=%d  /  end_packet=%d", start_packet, end_packet);
-            Serial.printf("\nPacket iterator:\n i=%d  /  n=%d", i, n);
-
-            archiveRead(buf, i, n); //Read "n" packets starting from packet number "i"
-
-            String request = generatePOSTRequest(buf, n); //Generate request with n elements.
-            Serial.print("[HTTP] POST...:\n");  Serial.print(request);
-            
-            
-            //Must put a delay or a timeout await here. Server is taking a bit to respond.
-            while(millis()-request_start_time < config_globals.response_timeout && request_retries < config_globals.connection_retry){ 
-              //Try to send packets to server, will try until timeout or number of request_retries reach maximum.
-              int httpCode = http.POST( request );    //Send POST request.
-              Serial.printf("\n[HTTP] POST sent... response code: %d\n", httpCode);  //HTTP response...
-
-              if (httpCode > 0){  //If > 0, the server got the request and is sending this response code.
-                
-                if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY){
-                  request_start_time=millis();    //Reset time counter.
-                  request_retries=0;                      //Reset request_retries counter.
-
-                  String payload = http.getString();  Serial.println(payload);
-                  
-                  sent_packets_amount += n;   //Increase counter.
-
-                  i += n;  //"i" is now the last read packet.
-                  n = MAX_PACKET_PER_REQUEST;
-                  if(i+n > end_packet)    //Limit the amount of packets to read if there are less than the maximum.
-                    n = end_packet-i; //equal n to que amount of pending packets.
-                  
-                  Serial.printf("\n      DATA SENT. Packets pending: %d", end_packet-i);
-                  Serial.printf("\n  Packets in next request: %d", n);
-                  Serial.printf("\n  i=%d  /  n=%d", i, n);
-                }
-                else{
-                  request_retries++;
-                  Serial.printf("[HTTP] POST failed, error: %s\n", http.errorToString(httpCode).c_str());
-                }
-              }
-              else{
-
-                  //  IT'S RETURNING CODE 11 -> TIMEOUT.
-                
-                  // HTTPC_ERROR_CONNECTION_REFUSED  (-1)
-                  // HTTPC_ERROR_SEND_HEADER_FAILED  (-2)
-                  // HTTPC_ERROR_SEND_PAYLOAD_FAILED (-3)
-                  // HTTPC_ERROR_NOT_CONNECTED       (-4)
-                  // HTTPC_ERROR_CONNECTION_LOST     (-5)
-                  // HTTPC_ERROR_NO_STREAM           (-6)
-                  // HTTPC_ERROR_NO_HTTP_SERVER      (-7)
-                  // HTTPC_ERROR_TOO_LESS_RAM        (-8)
-                  // HTTPC_ERROR_ENCODING            (-9)
-                  // HTTPC_ERROR_STREAM_WRITE        (-10)
-                  // HTTPC_ERROR_READ_TIMEOUT        (-11)
-               
-                //TEST CONNECTION!
-                request_retries++;
-                Serial.printf("\n Response not OK. code: %d\n isConnected():%d  /  http.connected():%d  / retries:%d", 
-                                                  httpCode,   WiFi.isConnected(),   http.connected(),     request_retries );
-                
-                }
-              if(request_retries >= config_globals.connection_retry)  //If maximum retries reached...
-                sendpackets = false;  //Stop sending packets.
-              yield();
-            }
-          }
-          sendpackets = false;
-
-          http.end(); //ends HTTP client.
-        }
-      }
-      yield();  //yield in every loop...
-    }
-    wifiTurnOff();  //Turn wifi off after sending all the packets.
-    return sent_packets_amount;
-  } 
-  else{
-    wifiTurnOff();
-    return 0;
-  }
-  
   // Serial.printf("\n Time taken: %dms.", (int)(millis() - start_time)); */
 }
 
-uint32_t getServerTimeUnix(void){
+uint32_t getServerTimeUnix(void){ //Obsolete!!
   //Cnnects to server, sends a request and returns unix time in UTC from server.
   return 0;
 }
@@ -970,7 +799,7 @@ void goDeepSleep(uint64_t time){
   
   uint32_t t = time/1000000;
  
-  rtcmem.setElapsedTime(t+(millis()/1000));
+  rtcmem.setElapsedTime(t+(millis()/1000));   //Wrong formula -> time is in us and millis() in ms...
 
   Serial.printf("\nGoing deep sleep for %d seconds... ", (t));
 
