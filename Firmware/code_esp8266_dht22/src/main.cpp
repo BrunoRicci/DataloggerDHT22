@@ -96,7 +96,7 @@ void setup() {
   wifiTurnOff();
   Serial.begin(115200);
   initglobals();
-  
+
   SPIFFS.begin();
 
    //Checks if device has lost power supply.
@@ -104,7 +104,7 @@ void setup() {
     setBatteryState(ON);  //Connect battery.
     if(rtcmem.initialize())  //Recovers variables
       {Serial.print("\nDevice powered off. RTC memory recovered correctly.");
-    digitalWrite(15,HIGH);      //DEBUG.
+    // digitalWrite(15,HIGH);      //DEBUG.
       }
     else  
     Serial.print("\n RTC memory recovery failed.");
@@ -210,9 +210,8 @@ void loop() {
       Serial.print("\n --- State: STATE_TRANSMISSION ---");
 
       uint8_t buf[576];
-      uint16_t pending_packets;
+      uint16_t pending_packets, sent_packets;
       pending_packets = rtcmem.rwVariables().archive_saved_pointer - rtcmem.rwVariables().archive_sent_pointer - 1;
-      // archiveRead(buf,rtcmem.rwVariables().archive_sent_pointer-1, rtcmem.rwVariables().archive_saved_pointer-1);
       Serial.printf("\n\n archive_sent_pointer= %d", rtcmem.rwVariables().archive_sent_pointer);
       Serial.printf("\n archive_saved_pointer= %d", rtcmem.rwVariables().archive_saved_pointer);
       Serial.printf("\n packets pending: %d", pending_packets);
@@ -220,9 +219,11 @@ void loop() {
       
       //Send pending measurements and increments the pointer by the amount of sent packets.
       rtcmem.var.archive_saved_pointer = archiveGetPointer(); //Make sure that pointer is updated (if value lost due power failure).
-      Serial.print("\n Starting to send packets...");
-      rtcmem.var.archive_sent_pointer += sendMeasurements(rtcmem.rwVariables().archive_sent_pointer, 0);
+      sent_packets = sendMeasurements(rtcmem.rwVariables().archive_sent_pointer, 0);
+      rtcmem.var.archive_sent_pointer += sent_packets;
       rtcmem.rwVariables();
+
+      Serial.printf("\n\n %d packets succesfully sent.", sent_packets);
 
       rtcmem.safeDisconnect();  //Save current values.
       statem.setState(STATE_DEEP_SLEEP);
@@ -233,38 +234,21 @@ void loop() {
       Serial.print("\n --- State: FORCE STATE_FORCE_MEASUREMENT ---");
       Serial.print("\n Obtaining measurements... ");
       
+      uint8 buf[RTC_MEMORY_MEASUREMENTS_COUNT*sizeof(Measurement)];   //Temporary buffer to read measurements.
+      uint16_t packets;
       Measurement m = getMeasurements();
-      //   //Save measurements into temporary memory.
-      if ( ! rtcmem.saveMeasurements(&m, sizeof(m))) //If data is not saved correctly in RAM...
-      {
-        Serial.printf(" \n -------- RTC memory full. Saving data to flash and clearing memory... --------");
-        /* save to flash, clear RAM and then rewrite to it */
-        
-        uint8 buf[RTC_MEMORY_MEASUREMENTS_COUNT*sizeof(Measurement)];   //Temporary buffer to read measurements.
-        uint16_t packets = rtcmem.readMeasurements(buf);
-        Serial.printf("\n    Measurements read from RTC / amount=%d ", packets);
-        archiveWrite(buf, sizeof(Measurement)*packets);   //Write data into archive (flash memory).
-      /* ////////////////// For testing //////////////////
-        Measurement m;
-        for (int16_t i = -13; i < -1; i++)
-        {
-          archiveRead(&m, rtcmem.rwVariables().archive_saved_pointer+i, rtcmem.rwVariables().archive_saved_pointer+i);
-          Serial.printf("\nRead measurements from flash:   (packet: %d)   data: \n",rtcmem.rwVariables().archive_saved_pointer+i);
-          Serial.printf("\ntimestamp: %d\n",m.timestamp);
-          Serial.printf("id_sensor: [%d,%d,%d,%d] \n",m.id_sensor[0],m.id_sensor[1],m.id_sensor[2],m.id_sensor[3]);
-          Serial.printf("temperature: [%d,%d,%d,%d] \n",m.temperature[0],m.temperature[1],m.temperature[2],m.temperature[3]);
-          Serial.printf("humidity: [%d,%d,%d,%d] \n",m.humidity[0],m.humidity[1],m.humidity[2],m.humidity[3]);
-          Serial.print("----------------------------------\n\n");
-        }
-        //////////////////////////////////////////////////////
-      */
-        rtcmem.clearMeasurements();   //Clears rtc memory.
+      
+      packets = rtcmem.readMeasurements(buf); //Read the measurements stored into RTC memory.
+      Serial.printf("\n    Measurements read from RTC / amount=%d ", packets);
+      archiveWrite(buf, sizeof(Measurement)*packets);   //Write data into archive (flash memory).
+      rtcmem.clearMeasurements();   //Clears rtc memory.
+
+      if(packets == RTC_MEMORY_MEASUREMENTS_COUNT){ //If RTC memory was full...
+        Serial.print("\nMemory full, saved to archive and stored last measurement.");
         rtcmem.saveMeasurements(&m, sizeof(m));   //Saves current measurement.
       }
-
-      statem.setState(STATE_TRANSMISSION);   //Transmit pending data.
-
       
+      statem.setState(STATE_TRANSMISSION);   //Transmit pending data.
     }
   }
   else if (statem.getState() == STATE_CONFIGURATION){
@@ -712,29 +696,26 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
         
         Serial.printf("\n      DATA SENT. Packets pending: %d", end_packet-i);
         Serial.printf("\n  Packets in next request: %d", n);
-        Serial.printf("\n  i=%d  /  n=%d", i, n);
+        Serial.printf("\n  i=%d  /  n=%d\n", i, n);
         
         sent_packets_amount += n;   //Increase counter.
       }
       else{
         Serial.printf("\n Error. Response code:%d", httpCode);
-        Serial.printf("\n HTTP client started: %d",  http.begin(url));   //Specify request destination
         request_retries++;
+        if(request_retries < config_globals.connection_retry);
+          Serial.printf("\n HTTP client started: %d",  http.begin(url));   //Specify request destination
       }
-      // yield();
+      yield();
     }
-
-    
-
-
-
-
 
     wifiTurnOff();
     return sent_packets_amount;
   }
   else{
     Serial.print("\nConnection timeout.");
+    wifiTurnOff();
+    return 0;
     //Connection failed.
   }
 
