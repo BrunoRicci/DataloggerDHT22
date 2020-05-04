@@ -238,15 +238,15 @@ void loop() {
       uint16_t packets;
       Measurement m = getMeasurements();
       
-      packets = rtcmem.readMeasurements(buf); //Read the measurements stored into RTC memory.
+      packets = rtcmem.readMeasurements(buf); //Read all the measurements stored into RTC memory.
+      
       Serial.printf("\n    Measurements read from RTC / amount=%d ", packets);
       archiveWrite(buf, sizeof(Measurement)*packets);   //Write data into archive (flash memory).
+      archiveWrite(&m, sizeof(Measurement));    //Write last measurement
       rtcmem.clearMeasurements();   //Clears rtc memory.
-
-      if(packets == RTC_MEMORY_MEASUREMENTS_COUNT){ //If RTC memory was full...
-        Serial.print("\nMemory full, saved to archive and stored last measurement.");
-        rtcmem.saveMeasurements(&m, sizeof(m));   //Saves current measurement.
-      }
+      
+      //Current measurement is not saved to RTC memory, as it is directly saved into archive
+      //to be sent to the server.
       
       statem.setState(STATE_TRANSMISSION);   //Transmit pending data.
     }
@@ -689,6 +689,8 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
         String payload = http.getString();  
         Serial.print("\n Response:"); Serial.println(payload);  
 
+        sent_packets_amount += n;   //Increase sent packets counter.
+
         i += n;  //"i" is now the last read packet.
         n = MAX_PACKET_PER_REQUEST;
         if(i+n > end_packet)    //Limit the amount of packets to read if there are less than the maximum.
@@ -697,8 +699,6 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
         Serial.printf("\n      DATA SENT. Packets pending: %d", end_packet-i);
         Serial.printf("\n  Packets in next request: %d", n);
         Serial.printf("\n  i=%d  /  n=%d\n", i, n);
-        
-        sent_packets_amount += n;   //Increase counter.
       }
       else{
         Serial.printf("\n Error. Response code:%d", httpCode);
