@@ -81,7 +81,9 @@ typedef struct{
   uint16_t id_transceiver;    
 
   uint16_t  sample_time;    //lapse between measurements (in seconds)
+  uint8_t   connection_time[2]; //[hours][minutes]
 
+  uint8_t operation_mode;
 } Config_globals;
 
 ESP8266WiFiMulti WiFiMulti;             //Wifi client side handle.
@@ -131,10 +133,8 @@ void loop() {
         //Transmission should be controlled by time, not by rtc memory being filled... -> CHANGED!!
         setTime(rtcmem.rwVariables().current_time);
         Serial.print("\nTime now:");
-        Serial.printf("\n   %2d:%2d:%2d", hour(), minute(), second());
+        Serial.printf("\n   %2d:%2d:%2d (UTC)", hour(), minute(), second());
         Serial.printf("\n    %2d/%2d/%4d", day(), month(), year());
-
-
 
         if(reedSwitchIsPressed()){  //if external interrupt (switch was pressed)...
           Serial.print("\n\nExternal interrupt.");
@@ -283,57 +283,11 @@ void loop() {
       Serial.print("\n --- State: STATE_DEEP_SLEEP ---");
 
       Serial.printf("\nDevice's been running for %d ms.", millis());
-      goDeepSleep(60e6-millis());
+      goDeepSleep(60e3-millis());
     }
     
   }
 
-
-  //Waits for WiFi connection
-/*   if ((WiFiMulti.run() == WL_CONNECTED)) {
-    Serial.printf("WiFi Connected!");
-    
-    WiFiClient client;
-    HTTPClient http;
-  
-    Serial.print("[HTTP] begin...\n");
-    if (http.begin(client, "http://192.168.0.172:8080/sendmeasurements")) {  // HTTP
-      String request;
-
-      
-      //Send POST request
-      Serial.print("[HTTP] POST...:\n");
-      Serial.print(request);
-      int httpCode = http.POST( request );
-      //int httpCode = http.GET();
-
-      // httpCode will be negative on error
-      if (httpCode > 0) {
-        // HTTP header has been send and Server response header has been handled
-        Serial.printf("[HTTP] POST... code: %d\n", httpCode);
-        
-        // file found at server
-        if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
-          String payload = http.getString();
-          Serial.println(payload);
-        }
-
-        goDeepSleep(60e6);  //Deep sleep for low power consumption.
-
-      } else {
-        Serial.printf("[HTTP] GET failed, error: %s\n", http.errorToString(httpCode).c_str());
-        goDeepSleep(60e6);
-      }
-      http.end();
-    } 
-    else {
-      Serial.printf("[HTTP] Unable to connect\n");
-      goDeepSleep(60e6);  //Deep sleep for low power consumption.
-    }
-  } 
-*/
-
-  
 }
 
 void portInit(void){
@@ -637,13 +591,13 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
       pending packets instead of the amount specified. 
   */
   HTTPClient http;
-  uint16_t start_connection_time, start_request_time;
-  uint8_t connection_retries=0, request_retries=0;
-  bool connection_timeout=false, request_timeout=false;
+  uint16_t start_connection_time;
+  uint8_t request_retries=0;
   uint16_t sent_packets_amount = 0;
+  // bool connection_timeout=false, request_timeout=false;
 
   wifiTurnOn(); //Turn on wifi.
-  Serial.setDebugOutput(true);  //DEBUG
+  // Serial.setDebugOutput(true);  //DEBUG
   WiFi.begin(config_globals.server_ap_ssid, config_globals.server_ap_pass);
   
   Serial.print("\nConnecting to network...");
@@ -795,15 +749,15 @@ void* stringToArray(std::string origin_string){
 }
 
 void goDeepSleep(uint64_t time){
-  if(time > 3600000000 ) time = 3600000000;  //Maximum 1h (3600 sec).
+  if(time > 3600000 ) time = 3600000;  //Maximum 1h (3600 sec).
   
-  uint32_t t = time/1000000;
+  uint32_t t = time/1000;
  
-  rtcmem.setElapsedTime(t+(millis()/1000));   //Wrong formula -> time is in us and millis() in ms...
+  rtcmem.setElapsedTime(t + millis()/1000);   //in seconds
 
   Serial.printf("\nGoing deep sleep for %d seconds... ", (t));
 
-  ESP.deepSleep(time, WAKE_RF_DISABLED);  //deep sleeps for 5 seconds...
+  ESP.deepSleep(time*1000, WAKE_RF_DISABLED);  //deep sleeps for 5 seconds...
 }
 
 void setSensorPower(unsigned char state){
@@ -878,6 +832,9 @@ bool initglobals(void){
     config_globals.id_sensor_3=3;
     config_globals.id_sensor_4=4;
     config_globals.sample_time=3600;
+    config_globals.connection_time[0]=3;  //6:30 a.m. UTC
+    config_globals.connection_time[0]=30;
+
   }
   return false;
 }
