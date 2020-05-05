@@ -335,14 +335,14 @@ bool checkBattery(void){
 bool isCharging(void){
   //Returns true if the device is being charged.
   setSensorPower(OFF);    //Sensors must be powered off in order to detect the charger properly.
-  pinMode(CHARGER_DETECT_PIN, INPUT);
+  pinMode(PWR_SENSORS_PIN_P, INPUT);  //As the same pin is used to power sensors and sense USB connected, put it as input temporarily.
   if ( !digitalRead(CHARGER_DETECT_PIN) ){  
     Serial.print("\nCharging.");
-    pinMode(CHARGER_DETECT_PIN, OUTPUT);    //Returns to original state.
+    pinMode(PWR_SENSORS_PIN_P, OUTPUT);    //Returns to original state.
     return true;}
   else{ 
     Serial.print("\nNot charging.");
-    pinMode(CHARGER_DETECT_PIN, OUTPUT);    //Returns to original state.
+    pinMode(PWR_SENSORS_PIN_P, OUTPUT);    //Returns to original state.
     return false; 
   } 
 }
