@@ -291,15 +291,14 @@ void loop() {
 }
 
 void portInit(void){
-  pinMode(PWR_SENSORS_PIN, OUTPUT);   //GPIO12 as output
+  pinMode(PWR_SENSORS_PIN_P, OUTPUT);   //GPIO13 as output
+  pinMode(PWR_SENSORS_PIN_N, OUTPUT);   //GPIO13 as output
   pinMode(PWR_CONTROL_PIN, OUTPUT);
-  pinMode(14, INPUT);
-  pinMode(15, OUTPUT);
-  pinMode(13, OUTPUT);
+  pinMode(REED_SWITCH_PIN, INPUT);
   pinMode(PWR_CONTROL_PIN, OUTPUT);
   digitalWrite(PWR_CONTROL_PIN,HIGH);
-  digitalWrite(15,LOW);
-  digitalWrite(13,HIGH);
+  // digitalWrite(PWR_SENSORS_PIN_N,LOW);  //Sensors power.
+  // digitalWrite(PWR_SENSORS_PIN_P,HIGH);
   setSensorPower(OFF);          //Sensors start turned off.
 }
 
@@ -336,12 +335,16 @@ bool checkBattery(void){
 bool isCharging(void){
   //Returns true if the device is being charged.
   setSensorPower(OFF);    //Sensors must be powered off in order to detect the charger properly.
-  if ( digitalRead(CHARGER_DETECT_PIN) )  //
-   { Serial.print("\nCharging.");
-     return true;}
-  else
-   { Serial.print("\nNot charging.");
-   return false; } 
+  pinMode(CHARGER_DETECT_PIN, INPUT);
+  if ( !digitalRead(CHARGER_DETECT_PIN) ){  
+    Serial.print("\nCharging.");
+    pinMode(CHARGER_DETECT_PIN, OUTPUT);    //Returns to original state.
+    return true;}
+  else{ 
+    Serial.print("\nNot charging.");
+    pinMode(CHARGER_DETECT_PIN, OUTPUT);    //Returns to original state.
+    return false; 
+  } 
 }
 
 bool reedSwitchIsPressed(void){
@@ -763,12 +766,14 @@ void goDeepSleep(uint64_t time){
 void setSensorPower(unsigned char state){
   if (state == ON)
   {
-    digitalWrite(PWR_SENSORS_PIN, LOW);  //Turn sensors supply on.
+    digitalWrite(PWR_SENSORS_PIN_P, LOW);  //Turn sensors supply on.
+    digitalWrite(PWR_SENSORS_PIN_N, HIGH);  //Turn sensors supply on.
     // Serial.printf("\nSensors turned on.");
   }
   if (state == OFF)
   {
-    digitalWrite(PWR_SENSORS_PIN, HIGH);  //Turn sensors supply off.
+    digitalWrite(PWR_SENSORS_PIN_P, HIGH);  //Turn sensors supply off.
+    digitalWrite(PWR_SENSORS_PIN_N, LOW);  //Turn sensors supply on.
     // Serial.printf("\nSensors turned off.");
   }
 }
