@@ -84,6 +84,7 @@ typedef struct{
   uint8_t   connection_time[2]; //[hours][minutes]
 
   uint8_t operation_mode;
+  bool ischarging;
 } Config_globals;
 
 ESP8266WiFiMulti WiFiMulti;             //Wifi client side handle.
@@ -94,12 +95,16 @@ Config_globals config_globals;
 
 
 void setup() {
-  portInit();
   wifiTurnOff();
-  Serial.begin(115200);
-  initglobals();
+  portInit();
+
+  delay(200);
 
   SPIFFS.begin();
+  initglobals();
+  config_globals.ischarging = isCharging();
+
+  Serial.begin(115200);
 
    //Checks if device has lost power supply.
   if(rtcmem.checkPowerdown()){
@@ -124,7 +129,7 @@ void loop() {
     if(statem.stateInit()){ //State initialization.
       Serial.print("\n --- State: STATE_WAKE ---");
       wifiTurnOff();
-      digitalWrite(15,HIGH);      //DEBUG.
+      // digitalWrite(15,HIGH);      //DEBUG.
       if(checkBattery()){ //If enough battery remaining...
         /*RTC and external interrupt are not differenced once 
         the device goes into deep sleep. It will always detect 
@@ -133,7 +138,7 @@ void loop() {
         //Transmission should be controlled by time, not by rtc memory being filled... -> CHANGED!!
         setTime(rtcmem.rwVariables().current_time);
         Serial.print("\nTime now:");
-        Serial.printf("\n   %2d:%2d:%2d (UTC)", hour(), minute(), second());
+        Serial.printf("\n   %d:%d:%d (UTC)", hour(), minute(), second());
         Serial.printf("\n    %2d/%2d/%4d", day(), month(), year());
 
         if(reedSwitchIsPressed()){  //if external interrupt (switch was pressed)...
@@ -282,10 +287,15 @@ void loop() {
     if(statem.stateInit()){
       Serial.print("\n --- State: STATE_DEEP_SLEEP ---");
 
-      Serial.printf("\nDevice's been running for %d ms.", millis());
-      goDeepSleep(60e3-millis());
+      pinMode(DHT_SENSOR_1_PIN, INPUT_PULLUP);
+      pinMode(DHT_SENSOR_2_PIN, INPUT_PULLUP);
+      pinMode(DHT_SENSOR_3_PIN, INPUT_PULLUP);
+      pinMode(DHT_SENSOR_4_PIN, INPUT_PULLUP);
+
+      wifiTurnOff();
+      Serial.printf("\nDevice has been running for %d ms.", millis());
+      goDeepSleep(config_globals.sample_time*1000-millis());
     }
-    
   }
 
 }
@@ -296,9 +306,14 @@ void portInit(void){
   pinMode(PWR_CONTROL_PIN, OUTPUT);
   pinMode(REED_SWITCH_PIN, INPUT);
   pinMode(PWR_CONTROL_PIN, OUTPUT);
+
+  pinMode(DHT_SENSOR_1_PIN, INPUT);
+  pinMode(DHT_SENSOR_2_PIN, INPUT);
+  pinMode(DHT_SENSOR_3_PIN, INPUT);
+  pinMode(DHT_SENSOR_4_PIN, INPUT);
+
   digitalWrite(PWR_CONTROL_PIN,HIGH);
-  // digitalWrite(PWR_SENSORS_PIN_N,LOW);  //Sensors power.
-  // digitalWrite(PWR_SENSORS_PIN_P,HIGH);
+
   setSensorPower(OFF);          //Sensors start turned off.
 }
 
@@ -316,11 +331,15 @@ void setBatteryState(uint8 state){
 }
 
 uint8_t getBatteryLevel(void){
-  uint16_t voltage = (uint16_t)((analogRead(BATTERY_SENSE_PIN))*(ADC_VOLTAGE_MV/1023));
+  //It is necessary to turn on the sensors in order to measure the battery level:
+  setSensorPower(ON);
+  delay(10);  //10ms delay...
+  uint16_t voltage = (uint16_t)((analogRead(BATTERY_SENSE_PIN))*(ADC_VOLTAGE_MV/1023)); //Read value
+  setSensorPower(OFF);
   uint16_t real_voltage = (uint16_t)((float)(voltage*VBAT_VADC_RATIO));   //Actual voltage before divider.
   // Serial.printf("\nReal voltage = %dmV" ,real_voltage);
   uint8_t percentage = ( ((real_voltage - BATTERY_MIN_VOLTAGE)*100) / (BATTERY_MAX_VOLTAGE-BATTERY_MIN_VOLTAGE) );
-  // Serial.printf("\nPercentage: %d" ,percentage);
+  Serial.printf("\nPercentage: %d" ,percentage);
 
   return percentage;  //Returns battery percentage.
 }
@@ -334,7 +353,7 @@ bool checkBattery(void){
 
 bool isCharging(void){
   //Returns true if the device is being charged.
-  setSensorPower(OFF);    //Sensors must be powered off in order to detect the charger properly.
+/*   setSensorPower(OFF);    //Sensors must be powered off in order to detect the charger properly.
   pinMode(PWR_SENSORS_PIN_P, INPUT);  //As the same pin is used to power sensors and sense USB connected, put it as input temporarily.
   if ( !digitalRead(CHARGER_DETECT_PIN) ){  
     Serial.print("\nCharging.");
@@ -344,12 +363,30 @@ bool isCharging(void){
     Serial.print("\nNot charging.");
     pinMode(PWR_SENSORS_PIN_P, OUTPUT);    //Returns to original state.
     return false; 
+  }  */
+
+  pinMode(CHARGER_DETECT_PIN, INPUT); //GPIO3 (RX) pin put as input to sense.
+
+  if( digitalRead(CHARGER_DETECT_PIN) ){  
+    Serial.print("\nCharging.");
+    pinMode(CHARGER_DETECT_PIN, FUNCTION_0);    //Returns to original state.
+    return true;
+  }
+  else{ 
+    Serial.print("\nNot charging.");
+    pinMode(CHARGER_DETECT_PIN, FUNCTION_0);    //Returns to original state.
+    return false; 
   } 
 }
 
 bool reedSwitchIsPressed(void){
   //Returns true if reed switch is pressed (when GPIO associated is in logic 1).
-  if(digitalRead(REED_SWITCH_PIN))  return true;
+  if(digitalRead(REED_SWITCH_PIN)){  
+    // digitalWrite(REED_SWITCH_PIN, LOW);   //Discharge capacitor  -> maybe this whould be implemented before deep sleep.
+    // pinMode(REED_SWITCH_PIN, OUTPUT);     //Change pin to ouput.
+    // pinMode(REED_SWITCH_PIN, INPUT);    //Put pin at the original type.
+    return true;
+  }
   else  return false;
 }
 
@@ -508,7 +545,7 @@ Measurement getMeasurements(void){
   dht22_sensor_4.begin();
 
   setSensorPower(ON);
-  delay(1000);  
+  delay(SENSOR_ON_TIME);  
   //GET MEASUREMENTS
   m.timestamp=rtcmem.getCurrentTime();  //Put current timestamp
   m.id_sensor[0] = 1;   //Read sensor number from configuration file.
@@ -519,10 +556,10 @@ Measurement getMeasurements(void){
   m.temperature[1] = generateMeasurementValue(TEMPERATURE, dht22_sensor_2.readTemperature());
   m.temperature[2] = generateMeasurementValue(TEMPERATURE, dht22_sensor_3.readTemperature());
   m.temperature[3] = generateMeasurementValue(TEMPERATURE, dht22_sensor_4.readTemperature());
-  m.humidity[0] = generateMeasurementValue(HUMIDITY, dht22_sensor_1.readHumidity());; 
-  m.humidity[1] = generateMeasurementValue(HUMIDITY, dht22_sensor_2.readHumidity());; 
-  m.humidity[2] = generateMeasurementValue(HUMIDITY, dht22_sensor_3.readHumidity());; 
-  m.humidity[3] = generateMeasurementValue(HUMIDITY, dht22_sensor_4.readHumidity());;  
+  m.humidity[0] = generateMeasurementValue(HUMIDITY, dht22_sensor_1.readHumidity());
+  m.humidity[1] = generateMeasurementValue(HUMIDITY, dht22_sensor_2.readHumidity());
+  m.humidity[2] = generateMeasurementValue(HUMIDITY, dht22_sensor_3.readHumidity());
+  m.humidity[3] = generateMeasurementValue(HUMIDITY, dht22_sensor_4.readHumidity()); 
 
   setSensorPower(OFF);
 
@@ -780,6 +817,7 @@ void setSensorPower(unsigned char state){
 
 void wifiTurnOff(void){
   WiFi.disconnect(true);  //Turns off wifi module, so in the wake up it won't turn on automatically until required.
+  delay(1);
   WiFi.mode( WIFI_OFF );  //Wifi starts turned off after wake up, in order to save energy.
   delay(1);
   WiFi.forceSleepBegin(); 
@@ -806,11 +844,11 @@ bool initglobals(void){
   File file = SPIFFS.open(CONFIG_FILE_NAME, "r");   //Open file
   if (file){        //If file opens correctly...
      
-    Serial.print("\n  Config_globals: ");  
+    // Serial.print("\n  Config_globals: ");  
     for (uint16_t i = 0; i < sizeof(buf); i++)
     {
       buf[i] = file.read(); //Copies the read byte 
-      Serial.printf("%X ",  buf[i]);
+      // Serial.printf("%X ",  buf[i]);
     } 
     memcpy(p, buf, sizeof(buf));  //Copies read data to the variable.
     // rwVariables();  //Stores read data to RTC memory.    ////////////////// REMOVED FOR TESTING ///////////
@@ -836,7 +874,7 @@ bool initglobals(void){
     config_globals.id_sensor_2=2;
     config_globals.id_sensor_3=3;
     config_globals.id_sensor_4=4;
-    config_globals.sample_time=3600;
+    config_globals.sample_time=300;
     config_globals.connection_time[0]=3;  //6:30 a.m. UTC
     config_globals.connection_time[0]=30;
 
@@ -861,8 +899,11 @@ unsigned char runWebServer(void){
     Serial.println(".");
     delay(100);
   }
-  
-  // Iniciar servidor
+
+  analogWrite(LED_B_PIN, 20); 
+  analogWriteFreq(3);   //See minimum frequency
+
+  // start server
   server.begin();
   Serial.println("HTTP server started");
 

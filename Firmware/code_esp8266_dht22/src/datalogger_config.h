@@ -12,11 +12,12 @@
 #define DATALOGGER_CONNECTION_TIME      86400           //Time between server connection in seconds
 #define MEASUREMENTS_DAILY_ARCHIVE_SIZE (DATALOGGER_CONNECTION_TIME / DATALOGGER_SENSE_TIME)   
 #define DAILY_ARCHIVE_SAVE_TIME         DATALOGGER_CONNECTION_TIME           //Time for archive to be saved in the flash memory.
+#define SENSOR_ON_TIME                  1000
 
 #define TEMPERATURE     1
 #define HUMIDITY        2
 
-#define SWITCH_HOLD_TIME_CONFIG         2000            //Time to hold the switch until config mode is activated (in milliseconds)
+#define SWITCH_HOLD_TIME_CONFIG         5000            //Time to hold the switch until config mode is activated (in milliseconds)
 
 
 //Sensor model (DHT sensor library configuration).
@@ -30,13 +31,16 @@
 #define DHT_SENSOR_3_PIN        4
 #define DHT_SENSOR_4_PIN        5       
 
-#define CHARGER_DETECT_PIN      13      //GPIO13 to sense charger.   
+#define CHARGER_DETECT_PIN      3       //GPIO3 to sense charger.   
 #define PWR_CONTROL_PIN         12      //GPIO12 to connect or disconnect battery.
 #define PWR_SENSORS_PIN_P       13      //GPIO13 to control sensors power supply (high side).
 #define PWR_SENSORS_PIN_N       15      //GPIO15 to control sensors power supply (low side).
 #define REED_SWITCH_PIN         14      //GPIO14 to sense switch state.
 #define BATTERY_SENSE_PIN       A0      //A0 oin as analog
 
+#define LED_R_PIN       5
+#define LED_G_PIN       0
+#define LED_B_PIN       4
       
 //Power managements parameters.
 #define ADC_VOLTAGE_MV          3300
