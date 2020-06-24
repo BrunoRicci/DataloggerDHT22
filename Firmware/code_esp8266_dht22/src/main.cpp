@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ArduinoOTA.h>
 #include <time.h>
 
 #include <ESP8266WiFi.h>
@@ -35,6 +36,8 @@ void wifiTurnOff(void);
 void goDeepSleep(uint64_t time);
 bool isCharging(void);
 bool reedSwitchIsPressed(void);
+void dischargeCapacitor(void);
+void LED_Color(uint32 color);
 
 void* stringToArray(std::string origin_string);
 int32_t generateMeasurementValue(unsigned char type, float value);
@@ -58,6 +61,7 @@ void handleChangeServerConfig(void);
 unsigned char runWebServer(void);
 unsigned char handleFormatRam(void);
 unsigned char handleFormatFlash(void);
+unsigned char handleResetSentPointer(void);
 //---------------------------------------------------------------------------------------------------------------------
 
 typedef struct{
@@ -98,14 +102,12 @@ void setup() {
   wifiTurnOff();
   portInit();
 
-  delay(200);
-
   SPIFFS.begin();
   initglobals();
   config_globals.ischarging = isCharging();
 
   Serial.begin(115200);
-
+  
    //Checks if device has lost power supply.
   if(rtcmem.checkPowerdown()){
     setBatteryState(ON);  //Connect battery.
@@ -141,6 +143,8 @@ void loop() {
         Serial.printf("\n   %d:%d:%d (UTC)", hour(), minute(), second());
         Serial.printf("\n    %2d/%2d/%4d", day(), month(), year());
 
+
+        // if(reedSwitchIsPressed()){  //if external interrupt (switch was pressed)...
         if(reedSwitchIsPressed()){  //if external interrupt (switch was pressed)...
           Serial.print("\n\nExternal interrupt.");
           
@@ -163,7 +167,8 @@ void loop() {
             Serial.printf("\n awaiting hold for config mode...");
             delay(SWITCH_HOLD_TIME_CONFIG);  //Waits for a moment...
             if(reedSwitchIsPressed()){       //If switch is still pressed...
-              statem.setState(STATE_CONFIGURATION); //Go to configuration mode.
+              statem.setState(STATE_CONFIGURATION); //Go to configuration mode.    -> CONFIGURATION MODE DISABLED!!
+              //statem.setState(STATE_FORCE_MEASUREMENT);  //Forces measurement.
             }
             else    //if not hold...
               statem.setState(STATE_FORCE_MEASUREMENT);  //Forces measurement.
@@ -266,7 +271,6 @@ void loop() {
     if(statem.stateInit()){
       Serial.print("\n --- State: STATE_CONFIGURATION ---");
 
-      digitalWrite(15,HIGH);      //DEBUG.
       runWebServer();   //Run web server.
       // rtcmem.safeDisconnect();   //Better use this when entering configuration mode (save variables)
     }
@@ -294,7 +298,7 @@ void loop() {
 
       wifiTurnOff();
       Serial.printf("\nDevice has been running for %d ms.", millis());
-      goDeepSleep(config_globals.sample_time*1000-millis());
+      goDeepSleep(config_globals.sample_time*1000 - millis());
     }
   }
 
@@ -306,6 +310,8 @@ void portInit(void){
   pinMode(PWR_CONTROL_PIN, OUTPUT);
   pinMode(REED_SWITCH_PIN, INPUT);
   pinMode(PWR_CONTROL_PIN, OUTPUT);
+
+  dischargeCapacitor();
 
   pinMode(DHT_SENSOR_1_PIN, INPUT);
   pinMode(DHT_SENSOR_2_PIN, INPUT);
@@ -334,12 +340,17 @@ uint8_t getBatteryLevel(void){
   //It is necessary to turn on the sensors in order to measure the battery level:
   setSensorPower(ON);
   delay(10);  //10ms delay...
-  uint16_t voltage = (uint16_t)((analogRead(BATTERY_SENSE_PIN))*(ADC_VOLTAGE_MV/1023)); //Read value
+  uint16 adcr = analogRead(BATTERY_SENSE_PIN);
   setSensorPower(OFF);
-  uint16_t real_voltage = (uint16_t)((float)(voltage*VBAT_VADC_RATIO));   //Actual voltage before divider.
+
+  uint16_t voltage = (uint16_t)((adcr * ADC_VOLTAGE_MV)/(1023)); //Read value
+  // Serial.printf("\nVoltage = %dmV" ,voltage);
+  uint16_t real_voltage = (uint16_t)((float)(voltage*VBAT_VADC_RATIO) + Q_VCE_COMPENSATION);   //Actual voltage before divider.
   // Serial.printf("\nReal voltage = %dmV" ,real_voltage);
   uint8_t percentage = ( ((real_voltage - BATTERY_MIN_VOLTAGE)*100) / (BATTERY_MAX_VOLTAGE-BATTERY_MIN_VOLTAGE) );
-  Serial.printf("\nPercentage: %d" ,percentage);
+  // Serial.printf("\nPercentage: %d" ,percentage);
+
+  if(percentage > 100)  percentage=100; //Limit maximum value.
 
   return percentage;  //Returns battery percentage.
 }
@@ -388,6 +399,41 @@ bool reedSwitchIsPressed(void){
     return true;
   }
   else  return false;
+}
+
+void dischargeCapacitor(void){
+  pinMode(REED_SWITCH_PIN, OUTPUT);     
+  digitalWrite(REED_SWITCH_PIN, LOW);   //Put pin in 0 to discharge capacitor
+  // delay(1);                      //waits a while till it discharges.
+  pinMode(REED_SWITCH_PIN, INPUT);      //Put the pin as input again (to sense).
+}
+
+void LED_Color(uint32_t color){   //8-bit colors
+  uint16_t r, g, b;
+  Serial.printf("\n color: %X", color);
+
+  r = (color >> 16) & 0xFF;
+  g = (color >> 8) & 0xFF;
+  b = (color) & 0xFF;
+
+  r = (r*100)/255;    //Convert to percentage for duty cycle.  -> Not needed
+  g = (g*100)/255;
+  b = (b*100)/255;
+ 
+  r = 1023-((1023*r)/100);          //Invert value because LEDs are in high side (common annode).
+  g = 1023-((1023*g)/100);
+  b = 1023-((1023*b)/100);
+
+  pinMode(LED_R_PIN, OUTPUT);
+  pinMode(LED_G_PIN, OUTPUT);
+  pinMode(LED_B_PIN, OUTPUT);
+  digitalWrite(LED_R_PIN, HIGH);    //Turn off leds.
+  digitalWrite(LED_G_PIN, HIGH);
+  digitalWrite(LED_B_PIN, HIGH);
+
+  analogWrite(LED_R_PIN, r); 
+  analogWrite(LED_G_PIN, g); 
+  analogWrite(LED_B_PIN, b); 
 }
 
 bool writeDataToFlash(String path, void* data, unsigned int bytes) { // send the right file to the client (if it exists)
@@ -454,7 +500,7 @@ bool archiveWrite(void* data, uint16_t bytes){
     // }
 
     File file = SPIFFS.open(MEASUREMENTS_FILE_NAME, "a"); //Opens archive file to append measurements.
-      // file.size();
+    Serial.printf("\nArchive file size: %d bytes",file.size());
     if (file) {    //If file opened correctly...
       
       int bytesWritten = file.write((const char*)data,bytes);
@@ -630,6 +676,14 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
       "packets" default value is 0, so if not specified in function call, it will send all the
       pending packets instead of the amount specified. 
   */
+  pinMode(LED_R_PIN, OUTPUT);
+  pinMode(LED_G_PIN, OUTPUT);
+  pinMode(LED_B_PIN, OUTPUT);
+  digitalWrite(LED_R_PIN, HIGH);    //Turn off leds.
+  digitalWrite(LED_G_PIN, HIGH);
+  digitalWrite(LED_B_PIN, HIGH);
+
+
   HTTPClient http;
   uint16_t start_connection_time;
   uint8_t request_retries=0;
@@ -643,8 +697,13 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
   Serial.print("\nConnecting to network...");
   start_connection_time = millis();
   while(WiFi.status() != WL_CONNECTED && (millis() - start_connection_time < config_globals.connection_timeout)){ //Blocks until Wifi is connected. 
+    digitalWrite(LED_B_PIN, LOW); //Blink GREEN led.
+    delay(50);
+    digitalWrite(LED_B_PIN, HIGH);
+    
     yield(); 
   }
+  digitalWrite(LED_B_PIN, HIGH);
 
   if(WiFi.status() == WL_CONNECTED){
     
@@ -686,6 +745,10 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
         String payload = http.getString();  
         Serial.print("\n Response:"); Serial.println(payload);  
         http.end(); //for test.
+ 
+        LED_Color(COLOR_GREEN);     //Blink GREEN led.
+        delay(50);
+        LED_Color(COLOR_BLACK);
 
         sent_packets_amount += n;   //Increase sent packets counter.
 
@@ -700,8 +763,12 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
       }
       else{
         Serial.printf("\n Error. Response code:%d", httpCode);
+        LED_Color(COLOR_RED);     //Blink red led.
+        delay(100);
+        LED_Color(COLOR_BLACK);
+
         request_retries++;
-        if(request_retries < config_globals.connection_retry);
+        if(request_retries < config_globals.connection_retry);  //This semicolon should not be here as it inhibits the if...
           Serial.printf("\n HTTP client started: %d",  http.begin(url));   //Specify request destination
       }
       yield();
@@ -731,6 +798,15 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
   else{
     Serial.print("\nConnection timeout.");
     wifiTurnOff();
+    LED_Color(COLOR_RED);     //Blink red led.
+    yield();
+    delay(200);
+    LED_Color(COLOR_BLACK);;
+    LED_Color(COLOR_RED);; //Blink red led.
+    yield();
+    delay(200);
+    LED_Color(COLOR_BLACK);;
+
     return 0;
     //Connection failed.
   }
@@ -874,7 +950,7 @@ bool initglobals(void){
     config_globals.id_sensor_2=2;
     config_globals.id_sensor_3=3;
     config_globals.id_sensor_4=4;
-    config_globals.sample_time=300;
+    config_globals.sample_time=3600;
     config_globals.connection_time[0]=3;  //6:30 a.m. UTC
     config_globals.connection_time[0]=30;
 
@@ -900,8 +976,8 @@ unsigned char runWebServer(void){
     delay(100);
   }
 
-  analogWrite(LED_B_PIN, 20); 
-  analogWriteFreq(3);   //See minimum frequency
+  LED_Color(COLOR_YELLOW); //Turns on red LED.
+  //analogWriteFreq(5);   //See minimum frequency
 
   // start server
   server.begin();
@@ -921,6 +997,7 @@ unsigned char runWebServer(void){
   server.on("/change_server_config", handleChangeServerConfig);
   server.on("/format_ram",handleFormatRam);
   server.on("/format_flash",handleFormatFlash);
+  server.on("/reset_archive_sent_pointer",handleResetSentPointer);
 
   return(1);
 }
@@ -1022,6 +1099,15 @@ unsigned char handleFormatFlash(void){
   else return 0;
 
 }
+
+unsigned char handleResetSentPointer(void){
+  Serial.print("\nresetting archive_sent_pointer...");
+  rtcmem.var.archive_sent_pointer = 0;
+  rtcmem.rwVariables();   //Save variables to RTC memory.
+  Serial.printf("\n\n    archive_sent_pointer reset. New value: %d", rtcmem.var.archive_sent_pointer);
+  Serial.printf("\n\n    archive_saved_pointer current value: %d", rtcmem.var.archive_saved_pointer);
+}
+
 
 bool handleChangeConfig(void){
   /*

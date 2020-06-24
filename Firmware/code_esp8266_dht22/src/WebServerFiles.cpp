@@ -4,15 +4,17 @@
 
 
 
-const char index_html[] PROGMEM = R"rawliteral(<!DOCTYPE HTML><html>
+const char index_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE HTML><html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
   <style>
     html {
-     font-family: Arial;
+     font-family:Arial, Helvetica, sans-serif;
      display: inline-block;
      margin: 0px auto;
      text-align: center;
+     min-width: 240px;
     }
     h2 { font-size: 2.0rem; }
     p { font-size: 2.0rem; }
@@ -23,21 +25,39 @@ const char index_html[] PROGMEM = R"rawliteral(<!DOCTYPE HTML><html>
       padding-bottom: 15px;
     }
     .box{
-    background-color: #d3d3d3;
+    background-color: #e7e7e7;
     width: 85%;
     border: 2px solid #3a67fc ;
     border-radius: 5px;
     padding: 20px;
     text-align: center;
+    text-transform: ;
     }
     .center {
     margin: auto;
     padding: 10px;
     }
+    .button{
+        background-color: rgb(201, 201, 201);
+        border: 2px solid rgb(65, 65, 65);
+        border-radius: 7px;
+        padding: 5px 14px;
+        margin: 10px;
+        width: 120px;
+    }
+    input{
+        padding: 5px;
+        margin: 2px;
+        border-radius: 10px;
+        border: 1px solid black;
+        width: 60%;
+        min-width: 30px;
+        text-align: center;
+    }
   </style>
 </head>
 <body>
-    <h2>Configuraci&oacuten del datalogger</h2>
+    <h2>Configuraci&oacute;n del datalogger</h2>
   
     <div id="box_network_config" class="box center">
         <b>Red</b>
@@ -48,7 +68,7 @@ const char index_html[] PROGMEM = R"rawliteral(<!DOCTYPE HTML><html>
             <br>
             <input type="text" placeholder="Password" name="new_password" width="50%">
             <br>
-            <input type="submit" value="Modificar" width="30%">
+            <input class="button" type="submit" value="Modificar">
             
         </form>
         
@@ -63,7 +83,7 @@ const char index_html[] PROGMEM = R"rawliteral(<!DOCTYPE HTML><html>
             <br>
             <input type="text" placeholder="Puerto" name="port" width="50%">
             <br>
-            <input type="submit" value="Modificar" width="30%">
+            <input class="button" type="submit" value="Modificar">
             
         </form>
     </div>
@@ -72,8 +92,9 @@ const char index_html[] PROGMEM = R"rawliteral(<!DOCTYPE HTML><html>
         <b>Memorias</b>
         <br>
         <br>
-        <button onclick="formatRam()">Formatear RAM</button>
-        <button onclick="formatFlash()">Formatear FLASH</button>    
+        <button class="button" onclick="formatRam()">Formatear RAM</button>
+        <button class="button" onclick="formatFlash()">Formatear FLASH</button>
+        <button class="button" onclick="resetSentPointer()">Resetear puntero send</button>
     </div>
 
 </body>
@@ -104,6 +125,21 @@ const char index_html[] PROGMEM = R"rawliteral(<!DOCTYPE HTML><html>
             console.log("FLASH memory format cancelled.");  //Cancelled
         }
     }
+
+    function resetSentPointer(){
+        if (confirm("¿Confirma que desea resetear el puntero?")) {
+            console.log("Resetting archive_sent_pointer...");
+            var xhttp = new XMLHttpRequest();
+            xhttp.open("POST", "reset_archive_sent_pointer", true);
+            xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+            xhttp.send("command=format_confirm");
+        }
+        else {
+            console.log("archive_send_pointer reset cancelled.");  //Cancelled
+        }
+    }
+
 </script>
-</html>)rawliteral";
+</html>
+)rawliteral";
 

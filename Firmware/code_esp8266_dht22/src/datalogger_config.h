@@ -26,10 +26,10 @@
 /*  GPIOs:
         NAME                    GPIO number
 ---------------------------------------------------------*/
-#define DHT_SENSOR_1_PIN        2
-#define DHT_SENSOR_2_PIN        0
-#define DHT_SENSOR_3_PIN        4
-#define DHT_SENSOR_4_PIN        5       
+#define DHT_SENSOR_1_PIN        5
+#define DHT_SENSOR_2_PIN        4
+#define DHT_SENSOR_3_PIN        0
+#define DHT_SENSOR_4_PIN        2       
 
 #define CHARGER_DETECT_PIN      3       //GPIO3 to sense charger.   
 #define PWR_CONTROL_PIN         12      //GPIO12 to connect or disconnect battery.
@@ -38,13 +38,23 @@
 #define REED_SWITCH_PIN         14      //GPIO14 to sense switch state.
 #define BATTERY_SENSE_PIN       A0      //A0 oin as analog
 
-#define LED_R_PIN       5
+#define LED_R_PIN       4
 #define LED_G_PIN       0
-#define LED_B_PIN       4
+#define LED_B_PIN       5
+#define COLOR_RED       (0xFF0000)
+#define COLOR_GREEN     (0x00FF00)
+#define COLOR_BLUE      (0x0000FF)
+#define COLOR_YELLOW    (0xFFB400)
+#define COLOR_VIOLET    (0xFF00FF)
+#define COLOR_CYAN      (0x00FF00)
+#define COLOR_WHITE     (0xFFFFFF)
+#define COLOR_BLACK     (0x0)
+
       
 //Power managements parameters.
-#define ADC_VOLTAGE_MV          3300
-#define VBAT_VADC_RATIO         (1.27)  //4.2V/3.3V
+#define ADC_VOLTAGE_MV          1000
+#define VBAT_VADC_RATIO         (4.2)  //4.2V/1v
+#define Q_VCE_COMPENSATION      0      //Voltage to add to the result, lost in transistor VCE.
 #define BATTERY_MAX_VOLTAGE     4200
 #define BATTERY_MIN_VOLTAGE     3300
 #define BATTERY_MIN_PERCENTAGE  5
@@ -108,7 +118,7 @@ typedef struct{
 /*---------------------------------------------------------*/
 #define SEND_MEASUREMENTS_URL   "/sendmeasurements"
 #define GET_TIME_URL            "/gettime"
-#define MAX_PACKET_PER_REQUEST       10      //Maximum number of packets to send per request.
+#define MAX_PACKET_PER_REQUEST       12      //Maximum number of packets to send per request.
 
 
 

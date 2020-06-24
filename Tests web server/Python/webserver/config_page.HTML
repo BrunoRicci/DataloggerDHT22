@@ -1,0 +1,136 @@
+<!DOCTYPE HTML><html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+  <style>
+    html {
+     font-family:Arial, Helvetica, sans-serif;
+     display: inline-block;
+     margin: 0px auto;
+     text-align: center;
+     min-width: 240px;
+    }
+    h2 { font-size: 2.0rem; }
+    p { font-size: 2.0rem; }
+    .units { font-size: 1.2rem; }
+    .dht-labels{
+      font-size: 1.5rem;
+      vertical-align:middle;
+      padding-bottom: 15px;
+    }
+    .box{
+    background-color: #e7e7e7;
+    width: 85%;
+    border: 2px solid #3a67fc ;
+    border-radius: 5px;
+    padding: 20px;
+    text-align: center;
+    text-transform: ;
+    }
+    .center {
+    margin: auto;
+    padding: 10px;
+    }
+    .button{
+        background-color: rgb(201, 201, 201);
+        border: 2px solid rgb(65, 65, 65);
+        border-radius: 7px;
+        padding: 5px 14px;
+        margin: 10px;
+        width: 120px;
+    }
+    input{
+        padding: 5px;
+        margin: 2px;
+        border-radius: 10px;
+        border: 1px solid black;
+        width: 60%;
+        min-width: 30px;
+        text-align: center;
+    }
+  </style>
+</head>
+<body>
+    <h2>Configuraci&oacute;n del datalogger</h2>
+  
+    <div id="box_network_config" class="box center">
+        <b>Red</b>
+        <br>
+        <br>
+        <form method="POST" action="change_network_config">
+            <input type="text" placeholder="SSID" name="new_ssid" width="50%" border-radius="2px">
+            <br>
+            <input type="text" placeholder="Password" name="new_password" width="50%">
+            <br>
+            <input class="button" type="submit" value="Modificar">
+            
+        </form>
+        
+    </div>
+    <br><br>
+    <div id="box_server_config" class="box center">
+        <b>Servidor</b>
+        <br>
+        <br>
+        <form method="POST" action="change_server_config" margin="10px">
+            <input type="text" placeholder="IPv4" name="ip" width="50%" border-radius="2px">
+            <br>
+            <input type="text" placeholder="Puerto" name="port" width="50%">
+            <br>
+            <input class="button" type="submit" value="Modificar">
+            
+        </form>
+    </div>
+    <br><br>
+    <div id="box_memory" class="box center">
+        <b>Memorias</b>
+        <br>
+        <br>
+        <button class="button" onclick="formatRam()">Formatear RAM</button>
+        <button class="button" onclick="formatFlash()">Formatear FLASH</button>
+        <button class="button" onclick="resetSentPointer()">Resetear puntero send</button>
+    </div>
+
+</body>
+<!-- ---------------------------------------------------- -->
+<script>
+    function formatRam(){
+        if (confirm("¿Confirma que desea formatear la RAM?")) {
+            console.log("RAM memory will format...");
+            var xhttp = new XMLHttpRequest();
+            xhttp.open("POST", "format_ram", true);
+            xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+            xhttp.send("command=format_confirm");          //Actual data to be sent
+        } 
+        else {
+            console.log("RAM memory format cancelled.");//Cancelled
+        }
+    }
+
+    function formatFlash(){
+        if (confirm("¿Confirma que desea formatear la FLASH?")) {
+            console.log("FLASH memory will format...");
+            var xhttp = new XMLHttpRequest();
+            xhttp.open("POST", "format_flash", true);
+            xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+            xhttp.send("command=format_confirm");
+        }
+        else {
+            console.log("FLASH memory format cancelled.");  //Cancelled
+        }
+    }
+
+    function resetSentPointer(){
+        if (confirm("¿Confirma que desea resetear el puntero?")) {
+            console.log("Resetting archive_sent_pointer...");
+            var xhttp = new XMLHttpRequest();
+            xhttp.open("POST", "reset_archive_sent_pointer", true);
+            xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+            xhttp.send("command=format_confirm");
+        }
+        else {
+            console.log("archive_send_pointer reset cancelled.");  //Cancelled
+        }
+    }
+
+</script>
+</html>

@@ -1,0 +1,52 @@
+{
+	"folders": [
+		{
+			"name": "code_esp8266_dht22",
+			"path": ".."
+		}
+	],
+	"settings": {
+		"git.ignoreLimitWarning": true,
+		"files.associations": {
+			"array": "cpp",
+			"functional": "cpp",
+			"tuple": "cpp",
+			"type_traits": "cpp",
+			"utility": "cpp",
+			"string": "cpp",
+			"atomic": "cpp",
+			"*.tcc": "cpp",
+			"bitset": "cpp",
+			"cctype": "cpp",
+			"clocale": "cpp",
+			"cmath": "cpp",
+			"cstdarg": "cpp",
+			"cstdint": "cpp",
+			"cstdio": "cpp",
+			"cstdlib": "cpp",
+			"ctime": "cpp",
+			"cwchar": "cpp",
+			"cwctype": "cpp",
+			"deque": "cpp",
+			"list": "cpp",
+			"unordered_map": "cpp",
+			"vector": "cpp",
+			"exception": "cpp",
+			"fstream": "cpp",
+			"initializer_list": "cpp",
+			"iosfwd": "cpp",
+			"istream": "cpp",
+			"limits": "cpp",
+			"new": "cpp",
+			"ostream": "cpp",
+			"numeric": "cpp",
+			"sstream": "cpp",
+			"stdexcept": "cpp",
+			"streambuf": "cpp",
+			"cinttypes": "cpp",
+			"regex": "cpp",
+			"typeinfo": "cpp",
+			"algorithm": "cpp"
+		}
+	}
+}

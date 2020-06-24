@@ -1,0 +1,1020 @@
+> Executing task in folder code_esp8266_dht22: C:\Users\BRUNO - PC\.platformio\penv\Scripts\platformio.exe device monitor <
+
+
+--- Available filters and text transformations: colorize, debug, default, direct, hexlify, log2file, nocontrol, printable, send_on_enter, time
+--- More details at http://bit.ly/pio-monitor-filters
+--- Miniterm on COM5  115200,8,N,1 ---
+--- Quit: Ctrl+C | Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H ---
+{l␀d��<␀�$�|␃␌␄␌�␄l�␌c|��␃�␛�;�#�␌b��'o�lng���␄#␜x��ds${lx�g�␐␃␄␌�␄l␄��␌␌␄c␄g�|␃l�l�␌c��'o�␀l��$ ␃�␓␛'o␄l`␃␇␃g{���'␌␄�␃l`␂␎;��n␌␄�␃d`␃�r␄�8�␄l�;␇�`␃��g�␂
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements...
+Data written to RTC memory:  address: 116 / bytes: 24 
+data:8640010203040D70FFFFFFFFFFFF59FFFFFF
+New pointer value: 122
+
+ --- State: STATE_DEEP_SLEEP ---  
+Device's been running for 1379 ms.
+Going deep sleep for 59 seconds... s$␀l��|␀�d�|␃␄␄␌�␌$�␄#|��␃�␓�{�c�␄#��go�l'g���␌#␜8��d{l;l8�'�␘␃␌␄�␌d␌��␌␄␌b␌o�|␃d�$�␌#��'o�␀l��$ ␃�␛␓o'␌$`␃␇␃os���g␌␄�␃l`␂␎;��o␄␌�␂$`␃�s␌�8�␄l�s␏�`␃��'�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 122 / bytes: 24 
+data:C240010203040D70FFFFFFFFFFFF58FFFFFF
+New pointer value: 128
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... s$␀d��<␀�d�|␃␄␄␌�␌d�␄c|��␃�␒�s�c�␄c��o'�do'���␄c␜p��l;drdp�n�␐␃␄␌�␌$␄��␌␄␌b␌o�|␃d�$�␄c��o'�␀$��l`␂�␛␓o'␌d`␃␏␂n;�ۓo␄␌�␃$ ␃␇{��g␄␌�␃l ␃�{␌�p�␌d�{␏�`␃��o�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 128 / bytes: 24 
+data:FE40010203040D70FFFFFFFFFFFF58FFFFFF
+New pointer value: 134
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... ;l␀$ܟ|␀�$�|␃␌␄␌�␌d�␄c|��␃�␛�;�#�␌#��o'�dgn���␌c␜p��${l{l8�g�␐␃␄␄�␄l␄��␌␄␌b␌n�<␃l�l�␌c��'o�␀l��d`␃�␛␒ng␄l`␃␇␃'{���'␌␄�␃l`␃␇;��'␌␄�␃l`␃�{␌�p�␄d�s␏� ␃��n�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 134 / bytes: 24 
+data:3A50010203040D70FFFFFFFFFFFF58FFFFFF
+New pointer value: 140
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1379 ms.
+Going deep sleep for 59 seconds... ;d␀$ܟ|␀�$�|␃␌␄␌�␌$�␄c|��␃�␛�;�#�␌#��o'�dgn���␌b␜8��d{${lx�o�␐␃␄␌�␌$␌��␄␌␄c␄g�|␃$�l�␌#��o'�␀d��l`␃�␛␛g'␌d`␃␏␃'{���'␌␄�␃l`␃␇{��g␄␄�␃l ␃�{␌�p�␄d�s␎� ␃��'�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 140 / bytes: 24 
+data:7650010203040D60FFFFFFFFFFFF59FFFFFF
+New pointer value: 146
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... ;d␀l��|␀�l�|␃␄␌␄�␄l�␌b<ǃ␃�␓�s�c�␄c��ng�lo'���␌#␜8��d{${lx�g�␐␂␄␌�␌$␌��␄␌␄c␄g�|␃$�$�␄#��og�␀l��$`␃�␛␒ng␄l`␃␇␃gs���g␄␌�␃$`␃␏s��o␌␄�␃l`␃�{␌�p�␄l�s␇� ␃��g�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... Not enough RTC memory.  
+ -------- RTC memory full. Saving data to flash and clearing memory... --------
+readMeasurements() / pointer: 146   /  amount: 12
+    Measurements read from RTC / amount=12 
+File was written, 288 bytes
+Data written to RTC memory:  address: 74 / bytes: 24 
+data:B250010203040D60FFFFFFFFFFFF58FFFFFF
+New pointer value: 80
+
+ --- State: STATE_TRANSMISSION ---
+ Generated POST request: id_transceiver=1&battery_level=151&timestamp=[1,1,1,1,31,31,31,31]&id_sensor=[1,2,3,4,1,2,3,4]&temperature=[228,231,229,228,228,231,229,228]&humidity=[79,93,96,98,80,93,96,98]
+
+Connecting to server...
+
+WiFi Connected!
+ url: http://192.168.137.1:8080/sendmeasurements
+
+[HTTP] begin...
+[HTTP] POST...:
+id_transceiver=1&battery_level=151&timestamp=[1,1,1,1,31,31,31,31]&id_sensor=[1,2,3,4,1,2,3,4]&temperature=[228,231,229,228,228,231,229,228]&humidity=[79,93,96,98,80,93,96,98][HTTP] POST... code: 200
+Values received!
+
+ data sent.
+ Time taken: 12492ms.
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 13919 ms.
+Going deep sleep for 59 seconds... ;l␀$��|␀�l�|␂␄␌␄�␌$�␄#<ǃ␃�␛�{�#�␌c��ng�dgn���␄c␜x��ls${l8�g�␘␃␌␄�␌d␌��␌␄␌c␄g�|␃$�l�␌c��'g�␀d��l`␃�␒␛go␄l ␃␇␃'{���o␄␌�␂$ ␃␇{��'␌␄�␃l`␃�r␄�x�␄l�r␇� ␃��o�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 80 / bytes: 24 
+data:FA50010203040D60FFFFFFFFFFFF58FFFFFF
+New pointer value: 86
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1436 ms.
+Going deep sleep for 59 seconds... s$␀l��|␀�l�|␂␄␌␄�␄l�␄c|��␃�␛�{�c�␄#��o'�do'���␌b␜8��d{l{lx�g�␐␃␄␌�␄l␄��␌␄␌b␌n�<␃l�l�␌c��go�␀$��d`␂�␓␛go␌$`␃␇␃or�ۛg␄␌�␃$`␃␏sۓo␄␌�␂d`␃�r␄�x�␌$�{␇�`␃��'�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 86 / bytes: 24 
+data:3660010203040D60FFFFFFFFFFFF57FFFFFF
+New pointer value: 92
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... sd␀l��|␀�l�|␃␄␌␄�␄d�␄c|��␃�␛�;�#�␌b��'o�l'g���␄#␜x��ls$s$x�o�␐␃␄␌�␌$␄��␌␄␌b␌o�|␃d�d�␄c��o'�␀$��d`␃�␛␛gn␌$ ␃␇␃gs���'␌␄�␃l`␂␎;��n␌␄�␃$`␃�s␌�8�␄d�s␏� ␃��n�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 92 / bytes: 24 
+data:7260010203040D60FFFFFFFFFFFF57FFFFFF
+New pointer value: 98
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1379 ms.
+Going deep sleep for 59 seconds... ;l␀$ܟ|␀�$�|␃␌␄␌�␌$�␄#|��␃�␛�;�#�␌#��gn�$gn���␌c␜8��d{l{lx�o�␐␃␄␌�␌d␌��␄␌␄c␄o�|␃d�d�␄c��'g�␀l��$`␃�␛␒ng␄l`␃␇␃'{���'␌␄�␃l`␃␇{��g␄␌�␃$ ␃�{␌�8�␄l�;␇�`␃��g�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 98 / bytes: 24 
+data:AE60010203040D50FFFFFFFFFFFF57FFFFFF
+New pointer value: 104
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... s$␀l��|␀�l�|␂␄␌␄�␄d�␄c|��␃�␛�;�#�␌b��'o�l'g���␄c␜x��lrdsdp�n�␘␃␄␌�␌$␌��␄␄␌#␌n�<␃l�d�␄c��ng�␀d��l ␃�␓␛go␄l ␃␇␃gs���'␌␄�␃l`␃␇;��'␌␄�␃l`␂�;␄�x�␌$�;␇�`␃��g�␂
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 104 / bytes: 24 
+data:EA60010203040D50FFFFFFFFFFFF58FFFFFF
+New pointer value: 110
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1379 ms.
+Going deep sleep for 59 seconds... ;l␀$ܟ<␀�d�|␃␌␄␌�␌d�␄c|��␃�␛�{�#�␌#��gn�$go���␄c␜p��${l{lx�g�␐␂␄␌�␌$␌Ĝ␄␌␄c␄g�|␃$�l�␌#��o'�␀d��l`␃�␒␛gn␌$`␃␏␃n;Ǜ�o␌␄�␃d`␃␎;��'␌␄�␃l`␃�{␌�p�␄l�s␎� ␃��n�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 110 / bytes: 24 
+data:2670010203040D50FFFFFFFFFFFF57FFFFFF
+New pointer value: 116
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... rd␀l��|␀�l�<␃␌␄␌�␌$�␄c|��␃�␛�r�c�␌c��'o�l'g���␄c␜x��lrdsdp�n�␘␃␌␄�␄d␌��␄␌␄c␄g�|␃$�$�␌#��gn�␀$��l`␂�␛␒ng␄l`␂␎␃'{���n␌␄�␃l`␂␎;��'␌␄�␃l`␂�;␄�p�␌$�{␏�`␂��o�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 116 / bytes: 24 
+data:6270010203040D50FFFFFFFFFFFF56FFFFFF
+New pointer value: 122
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... s$␀l��|␀�l�|␃␄␌␄�␄l�␄c|��␃�␛�{�c�␄#��o'�dgn���␌c␜p��${l{lx�o�␐␂␄␌�␌d␌Ĝ␄␌␄c␄'�|␃l�l�␌c��'o�␀l��$`␃�␛␓o'␌d`␃␏␂n;Ǜ�o␌␄�␃d`␂␎;��'␌␄�␃l`␃�{␌�p�␄d�s␎� ␃��n�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 122 / bytes: 24 
+data:9E70010203040D50FFFFFFFFFFFF57FFFFFF
+New pointer value: 128
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... ;l␀$ܟ|␀�l�<␃␄␌␄�␄l�␄c|��␃�␛�;�b�␄c��ng�lo'���␌#␜8��d{l{l8�g�␘␃␌␄�␄l␄��␄␌␄c␄g�|␃l�l�␄c��'g�␀l��l ␃�␓␛'g␄l`␃␇␃'{���'␌␄�␃l`␂␎;��'␌␄�␃l`␃�;␄�p�␌d�{␏�`␃��o�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 128 / bytes: 24 
+data:DA70010203040D50FFFFFFFFFFFF57FFFFFF
+New pointer value: 134
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1380 ms.
+Going deep sleep for 59 seconds... rd␀l��|␀�l�|␃␄␌␄�␄l�␄c|��␃�␛�{�c�␄c��o'�dgn���␌c␜p��${l;l8�g�␘␃␌␄�␄l␄��␌␄␄c␄o�|␂d�$�␄c��o'�␀d��l ␃�␒␛gn␌$`␃␇␃or�ۛg␄␌�␃$ ␃␇sۛg␄␌�␃l ␃�{␌�p�␌d�{␏�`␃��g�␂
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 134 / bytes: 24 
+data:1680010203040D50FFFFFFFFFFFF57FFFFFF
+New pointer value: 140
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1379 ms.
+Going deep sleep for 59 seconds... rd␀l��|␀�l�<␃␄␌␄�␄l�␌b<��␃�␓�{�c�␄c��o'�do'���␌c␜8��${l{l8�g�␘␃␌␄�␄l␄��␄␌␄c␄g�|␃$�$�␌#��go�␀$��d`␃�␛␛gn␌$`␃␇␃gs���'␄␄�␃l`␃␇{��'␄␄�␃l`␃�{␌�p�␄d�s␎� ␃��o�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 140 / bytes: 24 
+data:5280010203040D40FFFFFFFFFFFF56FFFFFF
+New pointer value: 146
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1380 ms.
+Going deep sleep for 59 seconds... ;l␀$ܟ|␀�d�|␃␄␄␌�␌d�␄c|��␃�␛�{�#�␄#��o'�dgn���␌c␜p��${l{lx�g�␐␂␄␌�␌$␌��␄␌␄c␄'�|␃$�l�␌#��o'�␀d��l`␃�␒␛gn␌$`␃␇␃or�ۛg␄␌�␃$`␃␇sۛo␄␌�␂$`␃�s␄�8�␄l�;␇�`␃��g�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... Not enough RTC memory.  
+ -------- RTC memory full. Saving data to flash and clearing memory... --------
+readMeasurements() / pointer: 146   /  amount: 12
+    Measurements read from RTC / amount=12
+File was written, 288 bytes
+Data written to RTC memory:  address: 74 / bytes: 24
+data:8E80010203040D40FFFFFFFFFFFF56FFFFFF
+New pointer value: 80
+
+ --- State: STATE_TRANSMISSION ---
+ Generated POST request: id_transceiver=1&battery_level=151&timestamp=[1,1,1,1,31,31,31,31]&id_sensor=[1,2,3,4,1,2,3,4]&temperature=[228,231,229,228,228,231,229,228]&humidity=[79,93,96,98,80,93,96,98]
+
+Connecting to server...
+
+ Unable to connect. data not sent.
+ Time taken: 14452ms.
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 15881 ms.
+Going deep sleep for 59 seconds... s$␀l��|␀�l�|␂␄␌␄�␄l�␄c|��␃�␛�{�c�␄c��og�lo'���␄#␜x��lrdrdp�'�␘␃␌␄�␄l␄��␄␌␄c␄o�|␃d�d�␄c��ng�␀l��$ ␃�␛␓o'␄d`␂␎␃'{���'␌␄�␃l`␃␇{��g␄␌�␃$ ␃�s␄�x�␄l�;␇�`␂��o�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 80 / bytes: 24 
+data:D880010203040D40FFFFFFFFFFFF56FFFFFF
+New pointer value: 86
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1437 ms.
+Going deep sleep for 59 seconds... {l␀d��<␀�d�|␂␄␌␄�␄l�␌c<ǃ␃�␓�s�c�␄c��'o�l'o���␄c␜p��${l{lx�o�␐␃␄␌�␌d␌��␄␌␄c␄g�|␃d�d�␄c��ng�␀lć$`␃�␓␛'o␄l ␃␇␃gs���g␄␌�␃l ␃␇{��g␄␌�␃$`␃�s␄�8�␄l�;␇�`␃��n�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 86 / bytes: 24 
+data:1490010203040D40FFFFFFFFFFFF56FFFFFF
+New pointer value: 92
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... {l␀d��|␀�l�|␃␄␌␄�␄l�␌b<ǃ␃�␓�s�c�␄c��'g�lng���␄c␜x��lrdrdp�'�␘␃␌␄�␄l␄��␄␄␄c␄o�|␃d�d�␄c��ng�␀l��$ ␃�␛␓og␄l`␂␎␃'{���'␌␄�␃l`␃␇{��g␄␌�␃$ ␃�{␌�8�␄l�r␇� ␃��g�␂
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 92 / bytes: 24 
+data:5090010203040D40FFFFFFFFFFFF56FFFFFF
+New pointer value: 98
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1379 ms.
+Going deep sleep for 59 seconds... rd␀l��|␀�$�<␃␌␄␌�␌$�␄c|��␃�␛�;�#�␌#��gn�$go���␄c␜p��$;l;l8�g�␘␃␄␄�␄l␄��␌␄␌b␌o�|␃d�d�␄c��ng�␀l��$`␃�␛␒'g␄l`␃␇␃gs���g␄␌�␃$ ␃␇sۛo␄␌�␂$`␃�s␄�x�␌$�;␇�`␃��o�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 98 / bytes: 24 
+data:8C90010203040D40FFFFFFFFFFFF56FFFFFF
+New pointer value: 104
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1379 ms.
+Going deep sleep for 59 seconds... rd␀l��|␀�l�<␃␌␄␌�␌$�␌#|��␂�␒�r�c�␌c��'o�l'g���␄c␜p��l;l;l8�'�␘␃␌␄�␄l␄��␌␄␌#␌n�<␃l�l�␄c��'g�␀l��$ ␃�␓␛'g␄l`␃␇␃'{���'␌␄�␃l`␂␇;��'␌␄�␃l`␃�{␌�p�␄d�s␎� ␃��g�␂
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 104 / bytes: 24 
+data:C890010203040D30FFFFFFFFFFFF56FFFFFF
+New pointer value: 110
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... ;l␀$ܟ|␀�$�|␃␌␄␌�␌$�␄#|��␂�␓�s�c�␄c��'g�lng���␄#␜x��ds$s$x�o�␐␃␄␌�␌$␌��␄␄␄#␌'�|␃l�l�␌b��go�␀l��d`␃�␓␛go␌$`␃␇␃os�ۓo␄␌�␃d`␃␏r��n␌␄�␃l`␃�{␌�p�␄d�s␏�`␃��g�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 110 / bytes: 24 
+data:4A0010203040D30FFFFFFFFFFFF57FFFFFF
+New pointer value: 116
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... {l␀d��<␀�d�|␂␄␌␄�␄l�␌c|��␃�␓�s�c�␄c��ng�lng���␄c␜p��l;l;d8�'�␘␃␌␄�␄l␄��␌␄␌#␌'�|␃l�l�␌b��gn�␀$��l`␂�␛␓o'␌d`␂␎␃'{���'␄␄�␃l ␃␇sۛo␄␌�␂d`␃�r␄�x�␌d�{␏� ␃��g�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 116 / bytes: 24 
+data:40A0010203040D30FFFFFFFFFFFF56FFFFFF
+New pointer value: 122
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1380 ms.
+Going deep sleep for 59 seconds... ;l␀$ܟ<␀�$�|␃␌␄␌�␌$�␄#|��␃�␛�r�b�␌c��'o�l'g���␄c␜p��l;drdp�'�␘␃␌␄�␄l␄��␄␌␄c␄g�|␃$�$�␌#��gn�␀$��l`␂�␓␛go␌$ ␃␇␃or�ۓo␄␌�␂$`␃␏sۓo␄␌�␂d`␃�s␄�x�␄l�;␇�`␃��o�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 122 / bytes: 24 
+data:7CA0010203040D30FFFFFFFFFFFF55FFFFFF
+New pointer value: 128
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1380 ms.
+Going deep sleep for 59 seconds... ;d␀l��|␀�l�<␃␄␄␄�␄l�␌b<��␃�␓�{�c�␄c��o'�dgn���␄c␜p��$;l;l8�g�␘␃␌␄�␄l␄��␌␄␌c␄o�|␃d�$�␄c��o'�␀d��l`␃�␓␛'o␄l`␃␇␃gs���g␄␄�␃l ␃␇{��g␄␌�␃l ␃�{␌�p�␄d�s␏� ␃��'�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 128 / bytes: 24 
+data:B8A0010203040D30FFFFFFFFFFFF56FFFFFF
+New pointer value: 134
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1379 ms.
+Going deep sleep for 59 seconds... {$␀l��|␀�l�<␃␌␄␌�␌$�␄c|��␃�␛�;�#�␄#��o'�do'���␄c␜x��l;d;d8�'�␘␃␄␄�␄$␄��␄␄␌#␌'�|␃l�l�␌b��gn�␀d��l`␃�␒␛gn␌$`␃␏␃or�ۓo␄␌�␃d`␃␏r��n␌␄�␃l`␃�;␄�p�␌d�s␏� ␃��g�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 134 / bytes: 24 
+data:F4A0010203040D30FFFFFFFFFFFF55FFFFFF
+New pointer value: 140
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1380 ms.
+Going deep sleep for 59 seconds... sd␀l��|␀�$�|␃␌␄␌�␌d�␄c|��␃�␛�{�c�␄c��'o�l'o���␄c␜p��${l{lx�g�␐␂␄␌�␌d␌��␄␌␄c␄g�|␃d�d�␄c��'o�␀l��d`␃�␓␛go␌$`␃␏␃or�ۓo␄␄�␃d`␃␎;��'␌␄�␃l ␃�{␌�8�␄l�;␇�`␃��'�␂
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 140 / bytes: 24 
+data:30B0010203040D30FFFFFFFFFFFF55FFFFFF
+New pointer value: 146
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1380 ms.
+Going deep sleep for 59 seconds... {l␀d��|␀�d�|␃␄␌␄�␄l�␌c<ǃ␃�␓�s�c�␄c��'o�l'o���␄c␜p��${l{lx�o�␐␃␄␌�␌d␌��␄␌␄c␄g�|␂d�d�␄c��ng�␀l��$ ␃�␛␓og␄d`␂␎␃'{���'␌␄�␃l ␃␇{��g␄␌�␂$`␃�s␄�x�␄$�{␇�`␂��'�␂
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... Not enough RTC memory.  
+ -------- RTC memory full. Saving data to flash and clearing memory... --------
+readMeasurements() / pointer: 146   /  amount: 12
+    Measurements read from RTC / amount=12 
+File was written, 288 bytes
+Data written to RTC memory:  address: 74 / bytes: 24
+data:6CB0010203040D30FFFFFFFFFFFF55FFFFFF
+New pointer value: 80
+
+ --- State: STATE_TRANSMISSION ---
+ Generated POST request: id_transceiver=1&battery_level=151&timestamp=[1,1,1,1,31,31,31,31]&id_sensor=[1,2,3,4,1,2,3,4]&temperature=[228,231,229,228,228,231,229,228]&humidity=[79,93,96,98,80,93,96,98]
+
+Connecting to server...
+
+WiFi Connected!
+ url: http://192.168.137.1:8080/sendmeasurements
+
+[HTTP] begin...
+[HTTP] POST...:
+id_transceiver=1&battery_level=151&timestamp=[1,1,1,1,31,31,31,31]&id_sensor=[1,2,3,4,1,2,3,4]&temperature=[228,231,229,228,228,231,229,228]&humidity=[79,93,96,98,80,93,96,98][HTTP] POST... code: 200
+Values received!
+
+ data sent.
+ Time taken: 12720ms.
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 14149 ms.
+Going deep sleep for 59 seconds... {l␀d��|␀�d�|␂␄␌␄�␄d�␄c|��␃�␛�;�#�␌#��gn�$go���␄c␜p��$;l;l8�'�␘␃␌␄�␄l␄��␄␌␄c␄g�|␃$�$�␌#��gn�␀$��d`␃�␛␓o'␌d`␃␏␂n;�ۓo␄␌�␂d`␃␏s��o␌␄�␃d`␃�r␄�x�␌$�{␇�`␃��n�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 80 / bytes: 24 
+data:B5B0010203040D20FFFFFFFFFFFF55FFFFFF
+New pointer value: 86
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1434 ms.
+Going deep sleep for 59 seconds... s$␀l��|␀�l�<␃␌␄␌�␌$�␄c|��␃�␛�{�c�␄c��'o�l'o���␄c␜p��$;l;l8�g�␐␃␄␌�␌$␌Ĝ␄␌␄c␄g�|␃$�$�␄c��o'�␀d��l ␃�␛␛g'␌d`␃␏␂';���'␌␄�␃l ␃␇{ۛo␄␌�␃d`␃�;␄�p�␌d�s␏� ␃��g�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements...
+Data written to RTC memory:  address: 86 / bytes: 24 
+data:F1B0010203040D20FFFFFFFFFFFF55FFFFFF
+New pointer value: 92
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1379 ms.
+Going deep sleep for 59 seconds... {l␀d��|␀�l�|␃␄␌␄�␄l�␌b<ǃ␂�␓�s�c�␌c��go�l'o���␄c␜p��$;l;l8�g�␘␃␄␄�␄l␄��␌␄␌b␌n�<␃l�d�␄c��ng�␀l��l ␃�␛␓o'␄d`␂␎␃'{���'␌␄�␃l ␃␇sۓo␄␌�␃d`␃�;␄�p�␌d�{␏�`␃��g�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements...
+Data written to RTC memory:  address: 92 / bytes: 24 
+data:2DC0010203040D20FFFFFFFFFFFF55FFFFFF
+New pointer value: 98
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1380 ms.
+Going deep sleep for 59 seconds... ;l␀d��<␀�d�|␃␄␌␄�␄l�␌b<ǃ␃�␓�s�c�␌c��go�$'o���␄c␜p��${l{lx�g�␐␂␄␌�␌$␌��␄␄␌#␌'�|␃l�l�␌c��'o�␀$��d`␃�␓␛go␌$`␃␇␃or�ۛo␄␌�␂$`␃␏sۓo␄␄�␃d`␃�;␄�x�␌d�{␏�`␃��'�␂
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 98 / bytes: 24 
+data:69C0010203040D20FFFFFFFFFFFF54FFFFFF
+New pointer value: 104
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1380 ms.
+Going deep sleep for 59 seconds... sd␀l��|␀�l�|␃␄␌␄�␄l�␌c|��␃�␛�{�#�␌#��g'�$gn���␌c␜8��d{l{l8�g�␐␃␄␌�␌$␄��␌␄␌#␌n�<␃l�l�␄c��'o�␀l��d`␃�␓␛'o␄l ␃␇␃os���g␄␌�␂d`␃␏r��'␌␄�␃l`␃�{␌�p�␄l�r␇�`␃��g�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 104 / bytes: 24 
+data:A5C0010203040D20FFFFFFFFFFFF55FFFFFF
+New pointer value: 110
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1379 ms.
+Going deep sleep for 59 seconds... rd␀l��|␀�l�<␃␌␄␌�␌$�␄c|��␃�␛�;�b�␌b��go�$go���␄c␜p��${l;l8�g�␘␃␄␌�␄l␄��␌␄␌#␌n�<␃l�l�␄c��'o�␀l��d`␃�␓␛go␌$ ␃␇␃or�ۓo␄␄�␃l`␂␇;��g␄␌�␃$ ␃�s␌�8�␄l�;␇�`␃��n�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements...
+Data written to RTC memory:  address: 110 / bytes: 24 
+data:E1C0010203040D20FFFFFFFFFFFF54FFFFFF
+New pointer value: 116
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1379 ms.
+Going deep sleep for 59 seconds... ;l␀$ܟ<␀�d�|␃␄␌␄�␄l�␌b<ǃ␂�␒�s�c�␄c��'o�l'o���␄c␜p��$;l;l8�g�␐␂␄␌�␌d␌��␄␌␄c␄g�|␂d�d�␄c��'o�␀$��d`␂�␒␛gn␌$`␃␇␃or�ۓo␄␌�␃d`␂␎;��'␌␄�␃l`␃�{␌�p�␄l�s␇�`␃��g�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 116 / bytes: 24 
+data:1DD0010203040D10FFFFFFFFFFFF55FFFFFF
+New pointer value: 122
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1379 ms.
+Going deep sleep for 59 seconds... s$␀l��|␀�l�|␃␄␌␄�␄l�␌b<ǃ␃�␓�s�c�␄c��'g�lng���␄#␜x��lsds$p�n�␘␃␄␄�␌d␌��␄␌␄c␄'�|␃l�l�␌c��'o�␀l��$`␃�␛␛o'␌$`␃␇␃os�ۛg␄␌�␃l ␃␇{��g␄␌�␃l ␃�{␌�p�␄l�s␎� ␃��o�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 122 / bytes: 24 
+data:59D0010203040D10FFFFFFFFFFFF54FFFFFF
+New pointer value: 128
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1380 ms.
+Going deep sleep for 59 seconds... s$␀l��|␀�l�|␃␄␌␄�␄l�␌#<��␂�␒�r�b�␌b��gn�$gn���␌c␜p��${l{lx�o�␐␃␄␌�␌d␌��␄␌␄c␄o�|␃d�d�␄c��'o�␀l��d`␃�␛␛'g␄l`␃␇␃gs���g␄␌�␃$ ␃␇sۓo␄␌�␂d`␃�r␄�x�␌$�{␇�`␂��'�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 128 / bytes: 24 
+data:95D0010203040D10FFFFFFFFFFFF54FFFFFF
+New pointer value: 134
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... ;l␀$ܟ<␀�d�|␃␄␌␄�␄d�␄c|��␃�␛�{�c�␄c��ng�lng���␄c␜p��l;drdp�'�␘␃␌␄�␄l␄��␌␄␌b␌n�<␃l�l�␌b��gn�␀$��l`␃�␛␓o'␄d`␃␎␃'{���'␌␄�␃l`␃␇{��g␄␌�␃$ ␃�s␌�8�␄l�;␇�`␃��g�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 134 / bytes: 24 
+data:D1D0010203040D10FFFFFFFFFFFF54FFFFFF
+New pointer value: 140
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1379 ms.
+Going deep sleep for 59 seconds... {l␀d��|␀�l�|␃␄␌␄�␄l�␌#<��␂�␒�r�b�␌b��go�$go���␄c␜p��${l{lx�o�␐␃␄␌�␌d␌Ĝ␄␌␄c␄g�|␃$�$�␄c��ng�␀lćd`␃�␓␛go␌$`␃␇␃or�ۓo␄␄�␃d`␂␇{��g␄␌�␃$`␃�r␄�x�␌$�{␏�`␃��'�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements...
+Data written to RTC memory:  address: 140 / bytes: 24 
+data:DE0010203040D10FFFFFFFFFFFF54FFFFFF
+New pointer value: 146
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... {l␀d��|␀�l�|␃␄␌␄�␄l�␌b<ǃ␃�␓�s�c�␄c��ng�lng���␄#␜x��lsds$p�n�␘␃␄␄�␌d␌��␄␌␄c␄'�|␃l�l�␌b��'o�␀l��$`␃�␛␓o'␌d`␃␏␂n;Ǜ�o␄␌�␂$`␃␏sۓo␄␌�␂d`␃�s␄�x�␄l�;␇�`␃��g�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... Not enough RTC memory.  
+ -------- RTC memory full. Saving data to flash and clearing memory... --------
+readMeasurements() / pointer: 146   /  amount: 12
+    Measurements read from RTC / amount=12
+File was written, 288 bytes
+Data written to RTC memory:  address: 74 / bytes: 24
+data:49E0010203040D10FFFFFFFFFFFF54FFFFFF
+New pointer value: 80
+
+ --- State: STATE_TRANSMISSION ---
+ Generated POST request: id_transceiver=1&battery_level=151&timestamp=[1,1,1,1,31,31,31,31]&id_sensor=[1,2,3,4,1,2,3,4]&temperature=[228,231,229,228,228,231,229,228]&humidity=[79,93,96,98,80,93,96,98]
+
+Connecting to server...
+
+ Unable to connect. data not sent.
+ Time taken: 14477ms.
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 15904 ms.
+Going deep sleep for 59 seconds... ;l␀$ܟ|␀�l�<␃␌␄␄�␄l�␌#<ǃ␃�␓�s�c�␄c��ng�do'���␌#␜8��ds$s$x�o�␐␃␄␌�␌d␌Ĝ␄␌␄c␄'�|␃l�l�␌c��'o�␀l��$`␃�␛␓o'␌$`␃␏␃or�ۓo␄␌�␂d`␃␏r��n␌␄�␃d`␂�;␄�p�␌d�{␏�`␃��n�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 80 / bytes: 24 
+data:93E0010203040D00FFFFFFFFFFFF53FFFFFF
+New pointer value: 86
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1446 ms.
+Going deep sleep for 59 seconds... {l␀d��<␀�d�|␃␄␄␄�␌d�␄c|��␃�␛�;�#�␌#��gn�$gn���␌c␜8��${l{lx�g�␐␂␄␌�␌$␄��␌␄␌#␌'�<␃l�l�␌c��go�␀l��d`␃�␓␛'g␄l`␃␇␃'{���'␌␄�␃l`␂␎;��'␌␄�␃l`␃�{␌�p�␄d�s␎� ␃��g�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 86 / bytes: 24 
+data:CFE0010203040D10FFFFFFFFFFFF53FFFFFF
+New pointer value: 92
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... ;l␀$ܟ<␀�d�|␃␌␄␌�␌d�␄c|��␃�␛�r�b�␌c��go�l'g���␄c␜p��lrdrdp�n�␘␃␌␄�␄d␌��␄␌␄c␄g�|␃l�l�␌b��gn�␀$��d`␂�␓␛'o␄l ␃␇␃gs���'␌␄�␃l`␃␇{��g␄␄�␃l ␃�{␌�8�␄l�r␇�`␃��g�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 92 / bytes: 24 
+data:BF0010203040D10FFFFFFFFFFFF53FFFFFF
+New pointer value: 98
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... sd␀l��|␀�$�<␃␌␄␌�␌$�␄c|��␃�␛�;�#�␌#��gn�$go���␄c␜p��l;drdp�'�␘␃␌␄�␄l␄��␄␌␄c␄g�|␂$�$�␄c��o'�␀d��l ␃�␛␛gn␌$`␃␏␂n;Ǜ�o␌␄�␃d`␂␎;��'␌␄�␃l ␃�{␌�p�␄l�s␎� ␃��o�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 98 / bytes: 24 
+data:47F0010203040D00FFFFFFFFFFFF53FFFFFF
+New pointer value: 104
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1380 ms.
+Going deep sleep for 59 seconds... ;l␀$ܟ|␀�d�|␃␄␄␄�␄l�␄c|��␃�␛�{�c�␄c��ng�lng���␄c␜p��l;l;l8�g�␐␂␄␌�␌d␌��␄␌␄c␄o�|␃d�d�␄c��'g�␀l��d`␃�␓␛go␌$`␃␇␃or�ۓo␄␄�␃d`␂␎;��'␌␄�␃l`␃�{␌�p�␄l�r␇�`␃��o�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 104 / bytes: 24 
+data:83F0010203040D00FFFFFFFFFFFF53FFFFFF
+New pointer value: 110
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... rd␀$ܟ<␀�d�|␃␄␌␄�␌$�␄c|��␃�␛�s�c�␄c��go�$gn���␌b␜8��lsdsdp�'�␘␃␌␄�␄l␄��␌␄␌#␌'�|␃l�l�␌#��o'�␀d��l ␃�␛␛'o␄l ␃␇␃gs���g␄␌�␂d`␃␏r��n␌␄�␃l ␃�s␌�8�␄l�;␇�`␃��n�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 110 / bytes: 24 
+data:BFF0010203040D00FFFFFFFFFFFF54FFFFFF
+New pointer value: 116
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... s$␀l��|␀�l�|␃␄␌␄�␄l�␌c<��␃�␓�s�c�␄c��'o�l'g���␄c␜p��l;l;d8�'�␘␃␌␄�␄l␄��␌␄␌c␄o�|␃d�d�␄c��'o�␀l��d`␃�␓␛go␌$`␃␇␃or�ۓo␄␄�␃d`␃␎;��'␌␄�␃l`␃�{␌�p�␄l�s␎� ␃��o�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 116 / bytes: 24 
+data:FBF0010203040D00FFFFFFFFFFFF54FFFFFF
+New pointer value: 122
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1379 ms.
+Going deep sleep for 59 seconds... {l␀d��<␀�d�|␃␌␄␌�␌$�␄c|��␃�␒�r�c�␌c��'o�lng���␄#␜x��ds${lx�o�␐␂␄␌�␌$␌��␌␄␌#␌'�<␃l�l�␌c��'o�␀l��d`␃�␛␓o'␌d`␃␏␂n;�ۓo␄␌�␃$ ␃␇{��g␄␄�␃l`␃�;␄�p�␌d�{␏�`␂��'�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 122 / bytes: 24 
+data:37100010203040D10FFFFFFFFFFFF55FFFFFF
+New pointer value: 128
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... {l␀d��<␀�d�|␃␄␄␄�␌d�␄c|��␃�␛�;�#�␌#��gn�$go���␄c␜p��$;l;l8�'�␘␃␌␄�␄l␄��␌␄␄c␄o�|␂d�d�␄c��og�␀d��l ␃�␛␛o'␌d`␃␏␂n;Ǜ�o␌␄�␃l`␂␎;��'␄␄�␃$ ␃�s␄�x�␌$�{␏�`␃��g�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 128 / bytes: 24 
+data:73100010203040D10FFFFFFFFFFFF55FFFFFF
+New pointer value: 134
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1380 ms.
+Going deep sleep for 59 seconds... ;d␀$ܟ|␀�$�|␃␌␄␌�␌$�␄c|��␃�␛�{�#�␄#��o'�dgn���␌b␜8��d{${$x�o�␘␃␄␄�␄d␌��␄␌␄c␄o�|␂d�d�␄c��ng�␀l��$`␃�␓␛go␌$`␃␏␃n;Ǜ�n␌␄�␃l`␃␇{��g␄␄�␃l ␃�{␌�8�␄l�;␇�`␃��n�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 134 / bytes: 24 
+data:AF100010203040D10FFFFFFFFFFFF55FFFFFF
+New pointer value: 140
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1381 ms.
+Going deep sleep for 59 seconds... ;l␀$��<␀�d�|␃␄␌␄�␌d�␄c|��␃�␛�{�c�␄c��og�log���␄c␜x��lrd;d8�g�␘␃␄␄�␄$␄��␄␄␄#␄'�|␃$�l�␌#��o'�␀d��l`␃�␒␛gn␌$`␃␏␃or�ۓo␄␌�␃d`␃␎;��'␌␄�␃l`␃�{␌�p�␄l�s␇� ␃��'�␂
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 140 / bytes: 24 
+data:EB100010203040D10FFFFFFFFFFFF56FFFFFF
+New pointer value: 146
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1380 ms.
+Going deep sleep for 59 seconds... {l␀d��|␀�d�|␂␄␌␄�␄l�␌#<ǃ␂�␒�s�c�␄c��'o�l'o���␄c␜p��${l;l8�g�␐␃␄␌�␌$␌��␄␌␄c␄g�|␃$�$�␄c��og�␀l��$`␃�␛␒'g␄l`␃␇␃gs���g␄␌�␃$ ␃␇{��g␄␌�␃$`␃�s␄�x�␄l�;␇�`␃��g�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... Not enough RTC memory.  
+ -------- RTC memory full. Saving data to flash and clearing memory... --------
+readMeasurements() / pointer: 146   /  amount: 12
+    Measurements read from RTC / amount=12
+File was written, 288 bytes
+Data written to RTC memory:  address: 74 / bytes: 24
+data:27110010203040D10FFFFFFFFFFFF56FFFFFF
+New pointer value: 80
+
+ --- State: STATE_TRANSMISSION ---
+ Generated POST request: id_transceiver=1&battery_level=151&timestamp=[1,1,1,1,31,31,31,31]&id_sensor=[1,2,3,4,1,2,3,4]&temperature=[228,231,229,228,228,231,229,228]&humidity=[79,93,96,98,80,93,96,98]
+
+Connecting to server...
+
+WiFi Connected!
+ url: http://192.168.137.1:8080/sendmeasurements
+
+[HTTP] begin...
+[HTTP] POST...:
+id_transceiver=1&battery_level=151&timestamp=[1,1,1,1,31,31,31,31]&id_sensor=[1,2,3,4,1,2,3,4]&temperature=[228,231,229,228,228,231,229,228]&humidity=[79,93,96,98,80,93,96,98][HTTP] POST... code: 200
+Values received!
+
+ data sent.
+ Time taken: 13862ms.
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 15292 ms.
+Going deep sleep for 59 seconds... {l␀d��<␀�d�|␃␄␌␄�␌d�␄c|��␃�␛�{�c�␄c��o'�do'���␌#␜8��ds$s$x�o�␐␃␄␌�␌$␌��␄␌␄#␄'�|␃l�l�␌#��gn�␀$��l`␂�␛␛'g␄l`␃␇␃g{���'␌␄�␃l ␃␇{��g␄␌�␂$`␃�s␄�x�␄$�;␇�`␃��'�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements...
+Data written to RTC memory:  address: 80 / bytes: 24 
+data:71110010203040D10FFFFFFFFFFFF56FFFFFF
+New pointer value: 86
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1435 ms.
+Going deep sleep for 59 seconds... {l␀d��<␀�d�|␂␄␌␄�␄l�␌c<��␃�␓�s�c�␄c��ng�lo'���␌#␜x��ds$s$x�o�␐␃␄␌�␌$␌��␄␄␌#␌'�<␃l�l�␌c��'o�␀l��$ ␃�␒␛gn␌$`␃␇␃or�ۛg␄␌�␃$`␃␇sۓo␄␌�␂$`␃�s␄�x�␄l�;␇�`␃��'�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 86 / bytes: 24 
+data:AD110010203040D10FFFFFFFFFFFF56FFFFFF
+New pointer value: 92
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... s$␀l��|␀�l�|␃␄␌␄�␄l�␌b<ǃ␂�␓�s�c�␌c��'o�$'o���␄c␜p��$;l;l8�g�␘␃␄␌�␄l␄��␌␄␌#␌n�<␃l�l�␄c��'g�␀l��$`␃�␛␒ng␄l`␃␇␃g{���'␌␄�␃l ␃␇{��g␄␌�␃l ␃�{␌�8�␄l�s␎� ␃��'�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 92 / bytes: 24 
+data:E9110010203040D10FFFFFFFFFFFF57FFFFFF
+New pointer value: 98
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1380 ms.
+Going deep sleep for 59 seconds... {l␀d��<␀�d�|␂␄␌␄�␄d�␄c|��␃�␛�;�#�␌#��gn�$'o���␄c␜p��$;l;dp�'�␘␃␌␄�␄l␄��␄␌␄c␄g�|␃$�l�␌#��go�␀$��d`␃�␛␒ng␄l`␂␇␃'{���'␌␄�␃l`␃␇{��'␄␄�␃l ␃�{␌�p�␄d�s␏� ␃��n�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 98 / bytes: 24 
+data:25120010203040D10FFFFFFFFFFFF57FFFFFF
+New pointer value: 104
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1381 ms.
+Going deep sleep for 59 seconds... rd␀$ܟ|␀�$�|␃␌␄␌�␌d�␄c|��␃�␛�{�c�␄c��'g�lng���␄c␜p��l;l;l8�g�␐␃␄␌�␌$␌Ĝ␄␌␄c␄g�|␃$�$�␄c��ng�␀l��$`␃�␓␛'o␄$ ␃␇␃or�ۓo␌␄�␃l`␃␇{��g␄␌�␃$`␃�s␄�x�␄$�;␇�`␂��o�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements...
+Data written to RTC memory:  address: 104 / bytes: 24 
+data:61120010203040D10FFFFFFFFFFFF57FFFFFF
+New pointer value: 110
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1380 ms.
+Going deep sleep for 59 seconds... s$␀l��|␀�l�|␃␄␌␄�␄l�␌b<ǃ␃�␓�s�c�␄c��og�do'���␌b␜8��ds${lx�o�␐␂␄␌�␄l␄��␌␄␌b␌o�|␃d�d�␄c��ng�␀l��l ␃�␒␛gn␌$`␃␏␃or�ۓo␄␌�␂$`␃␏sۓo␄␄�␃d`␃�r␄�x�␌$�{␏�`␃��o�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 110 / bytes: 24 
+data:9D120010203040D10FFFFFFFFFFFF57FFFFFF
+New pointer value: 116
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1379 ms.
+Going deep sleep for 59 seconds... ;d␀$ܟ|␀�$�|␃␌␄␌�␌$�␄c|��␃�␛�r�b�␌b��gn�$go���␌c␜8��d{l{lx�o�␐␃␄␌�␌$␌��␄␌␄#␌'�|␃l�l�␌c��'o�␀$��d`␃�␓␛go␌$`␃␇␃or�ۓo␄␌�␃d`␃␏r��o␄␄�␃d`␂�;␄�p�␌d�{␏�`␃��g�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 116 / bytes: 24 
+data:D9120010203040D10FFFFFFFFFFFF57FFFFFF
+New pointer value: 122
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... s$␀l��|␀�l�|␃␄␌␄�␄l�␌#<ǃ␃�␓�s�c�␄c��'o�l'g���␄c␜p��$;l;l8�g�␐␂␄␌�␌d␌��␄␌␄c␄g�|␂d�d�␄c��ng�␀l��d`␃�␓␛'o␄l ␃␇␃gs���g␄␌�␃$ ␃␇sۓo␄␌�␂$`␃�s␄�8�␄l�;␇�`␃��g�␂
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 122 / bytes: 24 
+data:15130010203040D10FFFFFFFFFFFF57FFFFFF
+New pointer value: 128
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... s$␀l��|␀�d�|␃␄␌␄�␄d�␄c|��␃�␛�;�b�␌c��'o�lng���␄#␜x��ds${lx�g�␐␃␄␌�␄l␄��␌␄␄c␄g�|␃l�l�␌c��'g�␀l��l ␃�␛␓o'␌d`␃␏␃or�ۓo␄␌�␃$`␃␇sۛg␄␌�␃$ ␃�{␌�p�␄l�s␇� ␃��n�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 128 / bytes: 24 
+data:51130010203040D00FFFFFFFFFFFF57FFFFFF
+New pointer value: 134
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1380 ms.
+Going deep sleep for 59 seconds... {l␀d��<␀�d�|␃␌␄␌�␌$�␄#|��␃�␒�s�c�␄c��'o�lng���␄c␜x��lrdsdp�n�␘␃␌␄�␌d␌��␄␌␄c␄g�|␃l�l�␌b��go�␀l��d`␃�␛␛gn␌$`␃␇␃or�ۛg␄␌�␃$`␃␇sۛg␄␌�␃$ ␃�{␌�8�␄l�s␎� ␃��'�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 134 / bytes: 24 
+data:8D130010203040D10FFFFFFFFFFFF57FFFFFF
+New pointer value: 140
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1380 ms.
+Going deep sleep for 59 seconds... s$␀d��<␀�d�|␃␄␄␄�␌d�␄c|��␃�␛�{�c�␄#��o'�do'���␌#␜8��ds$s$p�n�␘␃␌␄�␄l␄��␄␄␄c␄o�|␃d�d�␄c��ng�␀l��$ ␃�␛␓o'␌d`␃␏␃'{���'␌␄�␃l`␃␇{��g␄␌�␃l ␃�{␌�p�␄l�s␎� ␃��g�␂
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 140 / bytes: 24 
+data:C9130010203040D10FFFFFFFFFFFF57FFFFFF
+New pointer value: 146
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1381 ms.
+Going deep sleep for 59 seconds... s$␀l��|␀�l�|␂␄␌␄�␄l�␌b<ǃ␃�␓�s�c�␄c��'g�lng���␄c␜x��lrdrdp�'�␘␃␌␄�␄l␄��␌␄␄c␄o�|␃d�d�␄c��o'�␀d��l`␃�␒␛gn␌$`␃␇␃or�ۛg␄␌�␃$`␃␏sۓo␄␄�␃d`␃�r␄�x�␌$�{␏�`␃��o�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... Not enough RTC memory.  
+ -------- RTC memory full. Saving data to flash and clearing memory... --------
+readMeasurements() / pointer: 146   /  amount: 12
+    Measurements read from RTC / amount=12
+File was written, 288 bytes
+Data written to RTC memory:  address: 74 / bytes: 24
+data:5140010203040D10FFFFFFFFFFFF57FFFFFF
+New pointer value: 80
+
+ --- State: STATE_TRANSMISSION ---
+ Generated POST request: id_transceiver=1&battery_level=151&timestamp=[1,1,1,1,31,31,31,31]&id_sensor=[1,2,3,4,1,2,3,4]&temperature=[228,231,229,228,228,231,229,228]&humidity=[79,93,96,98,80,93,96,98]
+
+Connecting to server...
+
+ Unable to connect. data not sent.
+ Time taken: 10013ms.
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 11443 ms.
+Going deep sleep for 59 seconds... ;l␀$ܟ|␀�$�|␃␌␄␌�␌d�␄c|��␃�␛�;�#�␌#��gn�$go���␄c␜p��$;l;l8�'�␘␃␌␄�␄l␄��␌␄␌c␄o�|␃d�$�␄c��o'�␀$��l`␂�␛␓ng␄d`␃␏␃';Ǜ�n␌␄�␃d`␃␎;��n␌␄�␃d`␃�r␄�x�␌$�;␇�`␃��'�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements...
+Data written to RTC memory:  address: 80 / bytes: 24
+data:4B140010203040D10FFFFFFFFFFFF58FFFFFF
+New pointer value: 86
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1438 ms.
+Going deep sleep for 59 seconds... {l␀d��|␀�l�|␃␄␌␄�␄l�␌c<��␃�␓�{�c�␄c��o'�do'���␌c␜8��${l{l8�g�␐␃␄␄�␄l␄��␌␄␌#␌n�<␃l�l�␌c��'o�␀l��$`␃�␛␓o'␌d`␃␏␂n;Ǜ�o␄␌�␃d`␃␏s��o␌␄�␃d`␃�;␄�p�␌d�{␏�`␃��o�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements...
+Data written to RTC memory:  address: 86 / bytes: 24 
+data:87140010203040D10FFFFFFFFFFFF58FFFFFF
+New pointer value: 92
+
+ --- State: STATE_DEEP_SLEEP ---   
+Device's been running for 1378 ms. 
+Going deep sleep for 59 seconds... s$␀l��|␀�l�<␃␌␄␌�␌$�␌#|��␃�␛�;�#�␌#��gn�dg'���␌b␜8��lsdsdp�'�␘␃␌␄�␄l␄��␌␄␌b␌n�<␃l�l�␌b��gn�␀$��l`␃�␛␒'g␄l ␃␇␃os�ۓo␄␌�␃d`␃␎;��'␌␄�␃l ␃�{␌�8�␄l�;␇�`␃��g�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements...
+Data written to RTC memory:  address: 92 / bytes: 24 
+data:C3140010203040D10FFFFFFFFFFFF57FFFFFF
+New pointer value: 98
+
+ --- State: STATE_DEEP_SLEEP ---   
+Device's been running for 1379 ms. 
+Going deep sleep for 59 seconds... s$␀l��|␀�l�|␃␄␌␄�␄l�␌b<ǃ␃�␓�s�c�␄c��'g�lng���␄c␜x��lrdrdp�'�␘␃␌␄�␄l␄��␌␄␄c␄o�|␃d�d�␄c��ng�␀l��$`␃�␛␓og␄d`␂␎␃'{���'␌␄�␃l`␃␇{��'␄␄�␃l ␃�s␌�8�␄l�r␇�`␃��g�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements...
+Data written to RTC memory:  address: 98 / bytes: 24 
+data:FF140010203040D10FFFFFFFFFFFF57FFFFFF
+New pointer value: 104
+
+ --- State: STATE_DEEP_SLEEP ---  
+Device's been running for 1380 ms.
+Going deep sleep for 59 seconds... {l␀$��<␀�d�|␃␄␄␄�␌d�␄c|��␃�␛�;�#�␌#��g'�$gn���␄c␜p��${l;l8�g�␘␃␌␄�␄l␄��␌␄␄c␄o�|␂$�$�␄#��g'�␀$��d`␃�␛␓og␄d`␂␎␃'{���'␌␄�␃l`␂␇;��'␌␄�␃l`␃�{␌�p�␄d�s␎� ␃��g�␂
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 104 / bytes: 24 
+data:3B150010203040D10FFFFFFFFFFFF58FFFFFF
+New pointer value: 110
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1381 ms.
+Going deep sleep for 59 seconds... s$␀l��|␀�l�|␃␄␌␄�␄l�␌c|��␃�␛�{�c�␄c��o'�do'���␌b␜8��d{l{lx�g�␐␂␄␌�␄l␄��␌␄␌c␌o�|␃d�d�␄c��o'�␀d��l`␃�␓␛'o␄l`␃␇␃g{���'␌␄�␃l`␃␇{��g␄␄�␃l ␃�{␌�p�␄d�s␎� ␃��n�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements... 
+Data written to RTC memory:  address: 110 / bytes: 24 
+data:77150010203040D10FFFFFFFFFFFF58FFFFFF
+New pointer value: 116
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1379 ms.
+Going deep sleep for 59 seconds... sd␀l��|␀�l�<␃␌␄␌�␌$�␄#|��␃�␛�r�b�␌b��go�$'o���␄c␜p��${l{l8�g�␐␂␄␌�␌$␄��␌␄␌#␌'�<␃l�l�␌b��go�␀$��d`␃�␓␛'o␄l ␃␇␃gs���g␄␌�␃$ ␃␇sۓo␄␌�␂d`␃�s␄�x�␌$�{␇�`␂��g�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements...
+Data written to RTC memory:  address: 116 / bytes: 24
+data:B3150010203040D10FFFFFFFFFFFF58FFFFFF
+New pointer value: 122
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds... rd␀l��|␀�l�<␃␄␌␄�␄l�␌c|��␃�␛�{�#�␌#��gn�$go���␄c␜p��l;l;dp�'�␘␃␌␄�␄l␄��␄␌␄c␄g�|␂$�$�␄#��o'�␀d��l`␂�␓␛'g␄l`␃␇␃g{���'␄␄�␃l ␃␇{ۛg␄␌�␂$`␃�s␄�8�␄l�;␇�`␃��n�␃
+ --- State: STATE_WAKE ---
+
+RTC interrupt.
+ --- State: STATE_GET_MEASUREMENTS ---
+ Obtaining measurements...
+Data written to RTC memory:  address: 122 / bytes: 24
+data:EF150010203040D10FFFFFFFFFFFF57FFFFFF
+New pointer value: 128
+
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 1378 ms.
+Going deep sleep for 59 seconds...
+
+-------------------------------------------------------------------------------------------------------
+
+Bottle v0.13-dev server starting up (using WSGIRefServer())...
+Listening on http://192.168.137.1:8080/
+Hit Ctrl-C to quit.
+
+Received request:dict_keys(['id_transceiver', 'battery_level', 'timestamp', 'id_sensor', 'temperature', 'humidity'])
+Received values:{'id_transceiver': 1, 'battery_level': 154, 'timestamp': '[1,1,1,1,31,31,31,31]', 'id_sensor': '[1,2,3,4,1,2,3,4]', 'temperature': '[228,231,229,228,228,231,229,228]', 'humidity': '[79,93,96,98,80,93,96,98]'}
+192.168.137.163 - - [29/Apr/2020 22:21:51] "POST /sendmeasurements HTTP/1.1" 200 16
+Received request:dict_keys(['id_transceiver', 'battery_level', 'timestamp', 'id_sensor', 'temperature', 'humidity'])
+Received values:{'id_transceiver': 1, 'battery_level': 152, 'timestamp': '[1,1,1,1,31,31,31,31]', 'id_sensor': '[1,2,3,4,1,2,3,4]', 'temperature': '[228,231,229,228,228,231,229,228]', 'humidity': '[79,93,96,98,80,93,96,98]'}
+192.168.137.163 - - [29/Apr/2020 22:23:45] "POST /sendmeasurements HTTP/1.1" 200 16
+Received request:dict_keys(['id_transceiver', 'battery_level', 'timestamp', 'id_sensor', 'temperature', 'humidity'])
+Received values:{'id_transceiver': 1, 'battery_level': 151, 'timestamp': '[1,1,1,1,31,31,31,31]', 'id_sensor': '[1,2,3,4,1,2,3,4]', 'temperature': '[228,231,229,228,228,231,229,228]', 'humidity': '[79,93,96,98,80,93,96,98]'}
+192.168.137.163 - - [29/Apr/2020 22:25:50] "POST /sendmeasurements HTTP/1.1" 200 16
+Received request:dict_keys(['id_transceiver', 'battery_level', 'timestamp', 'id_sensor', 'temperature', 'humidity'])
+Received values:{'id_transceiver': 1, 'battery_level': 151, 'timestamp': '[1,1,1,1,31,31,31,31]', 'id_sensor': '[1,2,3,4,1,2,3,4]', 'temperature': '[228,231,229,228,228,231,229,228]', 'humidity': '[79,93,96,98,80,93,96,98]'}
+192.168.137.163 - - [29/Apr/2020 22:34:53] "POST /sendmeasurements HTTP/1.1" 200 16
+Received request:dict_keys(['id_transceiver', 'battery_level', 'timestamp', 'id_sensor', 'temperature', 'humidity'])
+Received values:{'id_transceiver': 1, 'battery_level': 151, 'timestamp': '[1,1,1,1,31,31,31,31]', 'id_sensor': '[1,2,3,4,1,2,3,4]', 'temperature': '[228,231,229,228,228,231,229,228]', 'humidity': '[79,93,96,98,80,93,96,98]'}
+192.168.137.163 - - [29/Apr/2020 22:59:40] "POST /sendmeasurements HTTP/1.1" 200 16
+Received request:dict_keys(['id_transceiver', 'battery_level', 'timestamp', 'id_sensor', 'temperature', 'humidity'])
+Received values:{'id_transceiver': 1, 'battery_level': 151, 'timestamp': '[1,1,1,1,31,31,31,31]', 'id_sensor': '[1,2,3,4,1,2,3,4]', 'temperature': '[228,231,229,228,228,231,229,228]', 'humidity': '[79,93,96,98,80,93,96,98]'}
+192.168.137.163 - - [29/Apr/2020 23:24:29] "POST /sendmeasurements HTTP/1.1" 200 16
+Received request:dict_keys(['id_transceiver', 'battery_level', 'timestamp', 'id_sensor', 'temperature', 'humidity'])
+Received values:{'id_transceiver': 1, 'battery_level': 152, 'timestamp': '[1,1,1,1,31,31,31,31]', 'id_sensor': '[1,2,3,4,1,2,3,4]', 'temperature': '[228,231,229,228,228,231,229,228]', 'humidity': '[79,93,96,98,80,93,96,98]'}
+192.168.137.163 - - [29/Apr/2020 23:46:41] "POST /sendmeasurements HTTP/1.1" 200 16
+Received request:dict_keys(['id_transceiver', 'battery_level', 'timestamp', 'id_sensor', 'temperature', 'humidity'])
+Received values:{'id_transceiver': 1, 'battery_level': 151, 'timestamp': '[1,1,1,1,31,31,31,31]', 'id_sensor': '[1,2,3,4,1,2,3,4]', 'temperature': '[228,231,229,228,228,231,229,228]', 'humidity': '[79,93,96,98,80,93,96,98]'}
+192.168.137.163 - - [30/Apr/2020 00:01:11] "POST /sendmeasurements HTTP/1.1" 200 16
+Received request:dict_keys(['id_transceiver', 'battery_level', 'timestamp', 'id_sensor', 'temperature', 'humidity'])
+Received values:{'id_transceiver': 1, 'battery_level': 151, 'timestamp': '[1,1,1,1,31,31,31,31]', 'id_sensor': '[1,2,3,4,1,2,3,4]', 'temperature': '[228,231,229,228,228,231,229,228]', 'humidity': '[79,93,96,98,80,93,96,98]'}
+192.168.137.163 - - [30/Apr/2020 00:13:27] "POST /sendmeasurements HTTP/1.1" 200 16

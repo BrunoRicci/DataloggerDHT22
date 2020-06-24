@@ -1,0 +1,187 @@
+EESchema Schematic File Version 4
+EELAYER 29 0
+EELAYER END
+$Descr A4 11693 8268
+encoding utf-8
+Sheet 1 1
+Title ""
+Date ""
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L Sensor:DHT11 U1
+U 1 1 5EB8F09F
+P 2250 1725
+F 0 "U1" V 1869 1725 50  0000 C CNN
+F 1 "DHT22" V 1960 1725 50  0000 C CNN
+F 2 "Pin_Headers:Pin_Header_Straight_1x04_Pitch2.54mm" H 2250 1325 50  0001 C CNN
+F 3 "http://akizukidenshi.com/download/ds/aosong/DHT11.pdf" H 2400 1975 50  0001 C CNN
+	1    2250 1725
+	0    1    1    0   
+$EndComp
+$Comp
+L Connector_Generic:Conn_01x03 J1
+U 1 1 5EB9012A
+P 950 1175
+F 0 "J1" H 868 850 50  0000 C CNN
+F 1 "DHT22" H 975 975 50  0000 C CNN
+F 2 "Connectors_Molex:Molex_KK-6410-03_03x2.54mm_Straight" H 950 1175 50  0001 C CNN
+F 3 "~" H 950 1175 50  0001 C CNN
+	1    950  1175
+	-1   0    0    1   
+$EndComp
+$Comp
+L Device:CP_Small C1
+U 1 1 5EB90C40
+P 1075 1950
+F 0 "C1" H 1163 1996 50  0000 L CNN
+F 1 "10uFx6v3" H 1163 1905 50  0000 L CNN
+F 2 "Capacitors_THT:CP_Radial_D4.0mm_P2.00mm" H 1075 1950 50  0001 C CNN
+F 3 "~" H 1075 1950 50  0001 C CNN
+	1    1075 1950
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:GNDD #PWR04
+U 1 1 5EB9285A
+P 1250 1325
+F 0 "#PWR04" H 1250 1075 50  0001 C CNN
+F 1 "GNDD" H 1254 1170 50  0000 C CNN
+F 2 "" H 1250 1325 50  0001 C CNN
+F 3 "" H 1250 1325 50  0001 C CNN
+	1    1250 1325
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:VDD #PWR03
+U 1 1 5EB92AB4
+P 1250 1025
+F 0 "#PWR03" H 1250 875 50  0001 C CNN
+F 1 "VDD" H 1267 1198 50  0000 C CNN
+F 2 "" H 1250 1025 50  0001 C CNN
+F 3 "" H 1250 1025 50  0001 C CNN
+	1    1250 1025
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R_Small R1
+U 1 1 5EB932EC
+P 1600 1175
+F 0 "R1" V 1404 1175 50  0000 C CNN
+F 1 "100" V 1495 1175 50  0000 C CNN
+F 2 "Resistors_SMD:R_0805" H 1600 1175 50  0001 C CNN
+F 3 "~" H 1600 1175 50  0001 C CNN
+	1    1600 1175
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R_Small R2
+U 1 1 5EB940EF
+P 1825 1025
+F 0 "R2" H 1766 979 50  0000 R CNN
+F 1 "10k" H 1766 1070 50  0000 R CNN
+F 2 "Resistors_SMD:R_0805" H 1825 1025 50  0001 C CNN
+F 3 "~" H 1825 1025 50  0001 C CNN
+	1    1825 1025
+	-1   0    0    1   
+$EndComp
+Wire Wire Line
+	1250 1025 1250 1075
+Wire Wire Line
+	1250 1075 1150 1075
+Wire Wire Line
+	1150 1275 1250 1275
+Wire Wire Line
+	1250 1275 1250 1325
+Wire Wire Line
+	1500 1175 1150 1175
+Wire Wire Line
+	1825 1125 1825 1175
+Wire Wire Line
+	1825 1175 1700 1175
+$Comp
+L power:VDD #PWR05
+U 1 1 5EB952C7
+P 1825 875
+F 0 "#PWR05" H 1825 725 50  0001 C CNN
+F 1 "VDD" H 1842 1048 50  0000 C CNN
+F 2 "" H 1825 875 50  0001 C CNN
+F 3 "" H 1825 875 50  0001 C CNN
+	1    1825 875 
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	1825 875  1825 925 
+$Comp
+L power:GNDD #PWR02
+U 1 1 5EB959EA
+P 1075 2100
+F 0 "#PWR02" H 1075 1850 50  0001 C CNN
+F 1 "GNDD" H 1079 1945 50  0000 C CNN
+F 2 "" H 1075 2100 50  0001 C CNN
+F 3 "" H 1075 2100 50  0001 C CNN
+	1    1075 2100
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:VDD #PWR01
+U 1 1 5EB95EA9
+P 1075 1800
+F 0 "#PWR01" H 1075 1650 50  0001 C CNN
+F 1 "VDD" H 1092 1973 50  0000 C CNN
+F 2 "" H 1075 1800 50  0001 C CNN
+F 3 "" H 1075 1800 50  0001 C CNN
+	1    1075 1800
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	1075 1800 1075 1850
+Wire Wire Line
+	1075 2050 1075 2100
+$Comp
+L power:GNDD #PWR06
+U 1 1 5EB97D3E
+P 1875 1775
+F 0 "#PWR06" H 1875 1525 50  0001 C CNN
+F 1 "GNDD" H 1879 1620 50  0000 C CNN
+F 2 "" H 1875 1775 50  0001 C CNN
+F 3 "" H 1875 1775 50  0001 C CNN
+	1    1875 1775
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:VDD #PWR07
+U 1 1 5EB980B5
+P 2625 1700
+F 0 "#PWR07" H 2625 1550 50  0001 C CNN
+F 1 "VDD" H 2642 1873 50  0000 C CNN
+F 2 "" H 2625 1700 50  0001 C CNN
+F 3 "" H 2625 1700 50  0001 C CNN
+	1    2625 1700
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	2625 1700 2625 1725
+Wire Wire Line
+	2625 1725 2550 1725
+Wire Wire Line
+	1875 1775 1875 1725
+Wire Wire Line
+	1875 1725 1950 1725
+Wire Wire Line
+	1825 1175 2200 1175
+Connection ~ 1825 1175
+Text Label 2025 1175 0    50   ~ 0
+DATA
+Text Label 2300 2100 0    50   ~ 0
+DATA
+Wire Wire Line
+	2250 2025 2250 2100
+Wire Wire Line
+	2250 2100 2475 2100
+$EndSCHEMATC

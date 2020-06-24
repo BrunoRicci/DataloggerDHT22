@@ -1,0 +1,65 @@
+--- State: STATE_WAKE ---
+
+External interrupt.
+Not charging.
+ --- State: FORCE STATE_FORCE_MEASUREMENT ---
+ Obtaining measurements...
+Data written to RTC memory:  address: 92 / bytes: 24 
+data:7B2C0010203040FFFFFFFFFFFFFFFFFFFFFFFF
+New pointer value: 98
+
+ --- State: STATE_TRANSMISSION ---
+
+ archive_sent_pointer= 144
+ archive_saved_pointer= 181
+ packets pending: 36
+ url: http://192.168.137.1:8080/sendmeasurements
+
+Connecting to network...
+ scandone
+VENDOR ACTION: len error step2: 80scandone
+state: 0 -> 2 (b0)
+state: 2 -> 3 (0)
+state: 3 -> 5 (10)
+add 0
+aid 1
+cnt 
+VENDOR ACTION: len error step2: 80VENDOR ACTION: len error step2: 80VENDOR ACTION: len error step2: 80VENDOR ACTION: len error step2: 80VENDOR ACTION: len error step2: 80VENDOR ACTION: len error step2: 80VENDOR ACTION: len error step2: 80VENDOR ACTION: len error step2: 80VENDOR ACTION: len error step2: 80VENDOR ACTION: len error step2: 80VENDOR ACTION: len error step2: 80VENDOR ACTION: len error step2: 80VENDOR ACTION: len error step2: 80state: 5 -> 0 (0)
+rm 0
+scandone
+scandone
+state: 0 -> 2 (b0)
+state: 2 -> 3 (0)
+state: 3 -> 5 (10)
+add 0
+aid 1
+cnt
+
+connected with DATALOGGER SERVER, channel 1
+dhcp client start...
+ip:192.168.137.224,mask:255.255.255.0,gw:192.168.137.1
+
+WiFi Connected!
+Connecting to server...
+
+start_packet=144  /  end_packet=180
+Packet iterator:
+ i=144  /  n=24[HTTP] POST...:
+id_transceiver=1&battery_level=148&timestamp=[8895,8895,8895,8895,8959,8959,8959,8959,9019,9019,9019,9019,9079,9079,9079,9079,9139,9139,9139,9139,9199,9199,9199,9199,9259,9259,9259,9259,9319,9319,9319,9319,9379,9379,9379,9379,9439,9439,9439,9439,9499,9499,9499,9499,9559,9559,9559,9559,9619,9619,9619,9619,9684,9684,9684,9684,9744,9744,9744,9744,9804,9804,9804,9804,9864,9864,9864,9864,9924,9924,9924,9924,9996,9996,9996,9996,10061,10061,10061,10061,10123,10123,10123,10123,10199,10199,10199,10199,10274,10274,10274,10274,10349,10349,10349,10349]&id_sensor=[1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4]&temperature=[215,-1,-1,-1,216,-1,-1,-1,215,-1,-1,-1,216,-1,-1,-1,215,-1,-1,-1,215,-1,-1,-1,215,-1,-1,-1,215,-1,-1,-1,215,-1,-1,-1,216,-1,-1,-1,215,-1,-1,-1,215,-1,-1,-1,215,-1,-1,-1,216,-1,-1,-1,215,-1,-1,-1,215,-1,-1,-1,216,-1,-1,-1,216,-1,-1,-1,216,-1,-1,-1,216,-1,-1,-1,216,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]&humidity=[66,255,255,255,66,255,255,255,66,255,255,255,66,255,255,255,66,255,255,255,66,255,255,255,66,255,255,255,66,255,255,255,66,255,255,255,66,255,255,255,66,255,255,255,66,255,255,255,66,255,255,255,66,255,255,255,66,255,255,255,66,255,255,255,66,255,255,255,66,255,255,255,68,255,255,255,66,255,255,255,66,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+[HTTP] POST... response code: 200
+Values received!
+
+      DATA SENT. Packets pending: 12
+  Packets in next request: 12
+  i=168  /  n=12state: 5 -> 0 (0)
+rm 0
+del if0
+usl
+mode : null
+force slp enable,type: 2
+fpm open,type:2 0
+
+safeDiscinnect data being saved:2 0 62 0 B5 0 A8 0 7A 2C 0 0 0 0 0 0 B1 0 0 0
+ --- State: STATE_DEEP_SLEEP ---
+Device's been running for 14385 ms.
+Going deep sleep for 59 seconds... enter deep sleep␂�

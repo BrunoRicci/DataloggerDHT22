@@ -1,0 +1,1 @@
+esptool.py -b460800 read_flash 0 0x400000 flash_dispositivo_3.bin
