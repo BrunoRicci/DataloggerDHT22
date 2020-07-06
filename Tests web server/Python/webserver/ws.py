@@ -18,6 +18,7 @@ DB_COLUMN_NAME_DATE_TIME = 'DATE_TIME'
 DB_COLUMN_NAME_TEMPERATURE = 'TEMPERATURE'
 DB_COLUMN_NAME_HUMIDITY = 'HUMIDITY'
 
+
 localdir = str(sys.path[0])
 def initDB(dir, nameDB):   
     print('DB directory to open: ' + str(dir + '\\' + nameDB))   #debug
@@ -58,7 +59,8 @@ def startDB(db):
 
 def handleReceivedData(dict_data):
     #manages data received from the node. 
-    data_valid = True
+    data_valid = True   #Validate data integrity.
+    
     columns=[
             DB_COLUMN_NAME_TIMESTAMP,
             DB_COLUMN_NAME_DATE_TIME,
@@ -66,41 +68,55 @@ def handleReceivedData(dict_data):
             DB_COLUMN_NAME_TEMPERATURE,
             DB_COLUMN_NAME_HUMIDITY
             ]
-    
-    values=[]
+
 
     if data_valid == True:
         startDB(actual_db)  #start database tables.
+        time_modifier = 0
         print('Saving data...')
+       
+        while time_modifier < 10:   #max 10 seconds.
+            values = []
+            for i in range(0,len(dict_data["timestamp"])):       #for each measurement value...
+                measurement = [
+                                dict_data["timestamp"][i] + time_modifier,
+                                str(datetime.datetime.fromtimestamp(dict_data["timestamp"][i]+time_modifier)),    #Convert epoch to current time (UTC -3:00)
+                                dict_data["id_sensor"][i],
+                                dict_data["temperature"][i],
+                                dict_data["humidity"][i]
+                            ]
+                values.append(measurement)  #Append list of values to the values-to-store list.
+                
+            # print('Data to be saved:' + str(values)) 
 
-        for i in range(0,len(dict_data["timestamp"])):       #for each measurement value...
-            measurement = [
-                            dict_data["timestamp"][i],
-                            str(datetime.datetime.fromtimestamp(dict_data["timestamp"][i])),    #Convert epoch to current time (UTC -3:00)
-                            dict_data["id_sensor"][i],
-                            dict_data["temperature"][i],
-                            dict_data["humidity"][i]
-                        ]
-            values.append(measurement)  #Append list of values to the values-to-store list.
-            
-        print('Data to be saved:' + str(values))
+            try:
+                actual_db.writeData(MEASUREMENTS_TABLE_NAME, columns, values)   #Save to database.
+            except IndexError:  
+                print("Exception.\n")
+                print(" - - - - - Timestamp: "+str(dict_data["timestamp"]))
+                time_modifier = time_modifier + 1
+                print("Time modifier: "+str(time_modifier))
+                print( "Has duplicates: "+str( len(set(dict_data["timestamp"])) ) )
+            else:       #If data saved correcly...
+                try:    #Try to save the status data. If timestamp (composite primary key) is repeated in the table, it will throw an exception.
+                    actual_db.writeData(DEVICES_STATE_TABLE_NAME,                           #Logs devices state.
+                                    ['TIMESTAMP','ID_TRANSCEIVER','BATTERY_LEVEL'], 
+                                    [[dict_data["current_time"], dict_data["id_transceiver"], dict_data["battery_level"]]]
+                                    )
+                except:
+                    pass
 
-        actual_db.writeData(MEASUREMENTS_TABLE_NAME, columns, values)   #Save to database.
+                return True     #Notices that data has been received correctly.
 
-        try:    #Try to save the status data. If timestamp (composite primary key) is repeated in the table, it will throw an exception.
-            actual_db.writeData(DEVICES_STATE_TABLE_NAME,                           #Logs devices state.
-                            ['TIMESTAMP','ID_TRANSCEIVER','BATTERY_LEVEL'], 
-                            [[dict_data["current_time"], dict_data["id_transceiver"], dict_data["battery_level"]]]
-                            )
-        except:
-            pass
-
-        return True     #Notices that data has been received correctly.
+        return False
     else:
         return False    
-
-    pass
-
+    
+def removeDuplicates(l):
+    # Remove duplicates from a list.
+    l = ["a", "b", "a", "c", "c"]
+    l = list( dict.fromkeys(mylist) )
+    return l
 
 """ BUG: when saving device status timestamp, "timestamp" attribute may be duplicated due to very fast packet sending from client (faster than 1 sec.)
     then, if this happens, handle the primary key unique constraint failure NOT trying to write this value, as the timestamp is frequent enough for 
