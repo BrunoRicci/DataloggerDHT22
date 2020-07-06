@@ -62,6 +62,8 @@ unsigned char runWebServer(void);
 unsigned char handleFormatRam(void);
 unsigned char handleFormatFlash(void);
 unsigned char handleResetSentPointer(void);
+unsigned char handleTurnOffDevice(void);
+unsigned char handleGetParameters(void);
 //---------------------------------------------------------------------------------------------------------------------
 
 typedef struct{
@@ -72,16 +74,16 @@ typedef struct{
   char local_ip[16];      //192.168.255.255 ->15 + NULL
   char wifi_security_type[10];   //// enum wifi_security_type{WEP, WPA, WPA2, WPA2E};
 
-  uint8_t   connection_retry;     //amount of retrials to connect in case of failure. (def:1).
-  uint32_t  connection_timeout;   //milliseconds to try connecting  (def:5000).
+  uint8_t   server_connection_retry;     //amount of retrials to connect in case of failure. (def:1).
+  uint32_t  network_connection_timeout;   //milliseconds to try connecting  (def:5000).
   uint32_t  response_timeout;     //milliseconds to await response  (def:2000).
   uint32_t  server_connection_timeout;
   // todo: evaluate which WPA2-Enterprise parameters are needed.
   
-  uint16_t id_sensor_1;     //Parameters to put into POST request.
-  uint16_t id_sensor_2;
-  uint16_t id_sensor_3;
-  uint16_t id_sensor_4;
+  uint16_t id_sensor_a;     //Parameters to put into POST request.
+  uint16_t id_sensor_b;
+  uint16_t id_sensor_c;
+  uint16_t id_sensor_d;
   uint16_t id_transceiver;    
 
   uint16_t  sample_time;    //lapse between measurements (in seconds)
@@ -101,7 +103,7 @@ Config_globals config_globals;
 void setup() {
   wifiTurnOff();
   portInit();
-
+  delay(50);      //Delay 50ms to avoid false "forced-turn on" after boot.
   SPIFFS.begin();
   initglobals();
   config_globals.ischarging = isCharging();
@@ -688,7 +690,7 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
   uint16_t start_connection_time;
   uint8_t request_retries=0;
   uint16_t sent_packets_amount = 0;
-  // bool connection_timeout=false, request_timeout=false;
+  // bool network_connection_timeout=false, request_timeout=false;
 
   wifiTurnOn(); //Turn on wifi.
   // Serial.setDebugOutput(true);  //DEBUG
@@ -696,7 +698,7 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
   
   Serial.print("\nConnecting to network...");
   start_connection_time = millis();
-  while(WiFi.status() != WL_CONNECTED && (millis() - start_connection_time < config_globals.connection_timeout)){ //Blocks until Wifi is connected. 
+  while(WiFi.status() != WL_CONNECTED && (millis() - start_connection_time < config_globals.network_connection_timeout)){ //Blocks until Wifi is connected. 
     digitalWrite(LED_B_PIN, LOW); //Blink GREEN led.
     delay(50);
     digitalWrite(LED_B_PIN, HIGH);
@@ -732,7 +734,7 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
       n = end_packet-i; //Equals to pending packets.
     }
     
-    while(n > 0 && request_retries < config_globals.connection_retry){   //While there are pending packets...
+    while(n > 0 && request_retries < config_globals.server_connection_retry){   //While there are pending packets...
       
       archiveRead(buf, i,n); //Read "n" packets starting from packet number "i"
 
@@ -768,7 +770,7 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
         LED_Color(COLOR_BLACK);
 
         request_retries++;
-        if(request_retries < config_globals.connection_retry);  //This semicolon should not be here as it inhibits the if...
+        if(request_retries < config_globals.server_connection_retry);  //This semicolon should not be here as it inhibits the if...
           Serial.printf("\n HTTP client started: %d",  http.begin(url));   //Specify request destination
       }
       yield();
@@ -865,7 +867,9 @@ void* stringToArray(std::string origin_string){
 }
 
 void goDeepSleep(uint64_t time){
-  if(time > 3600000 ) time = 3600000;  //Maximum 1h (3600 sec).
+  // time is in milliseconds.
+  
+  if( time > 3600000 ) time = 3600000;  //Maximum 1h (3600 sec).
   
   uint32_t t = time/1000;
  
@@ -892,7 +896,7 @@ void setSensorPower(unsigned char state){
 }
 
 void wifiTurnOff(void){
-  WiFi.disconnect(true);  //Turns off wifi module, so in the wake up it won't turn on automatically until required.
+  WiFi.disconnect(true);  //Turns off wifi module, so in the wake up it won\\\"t turn on automatically until required.
   delay(1);
   WiFi.mode( WIFI_OFF );  //Wifi starts turned off after wake up, in order to save energy.
   delay(1);
@@ -941,15 +945,15 @@ bool initglobals(void){
     strcpy(config_globals.wifi_security_type,"WPA2");
 
     config_globals.server_port=8080;
-    config_globals.connection_retry=2;
-    config_globals.connection_timeout=20000;
+    config_globals.server_connection_retry=2;
+    config_globals.network_connection_timeout=20000;
     config_globals.server_connection_timeout=2000;
     config_globals.response_timeout=5000;
     config_globals.id_transceiver=1;
-    config_globals.id_sensor_1=1;
-    config_globals.id_sensor_2=2;
-    config_globals.id_sensor_3=3;
-    config_globals.id_sensor_4=4;
+    config_globals.id_sensor_a=1;
+    config_globals.id_sensor_b=2;
+    config_globals.id_sensor_c=3;
+    config_globals.id_sensor_d=4;
     config_globals.sample_time=3600;
     config_globals.connection_time[0]=3;  //6:30 a.m. UTC
     config_globals.connection_time[0]=30;
@@ -998,6 +1002,11 @@ unsigned char runWebServer(void){
   server.on("/format_ram",handleFormatRam);
   server.on("/format_flash",handleFormatFlash);
   server.on("/reset_archive_sent_pointer",handleResetSentPointer);
+  server.on("/device_turn_off",handleTurnOffDevice);
+  server.on("/get_parameters",handleGetParameters);
+
+
+  
 
   return(1);
 }
@@ -1108,11 +1117,15 @@ unsigned char handleResetSentPointer(void){
   Serial.printf("\n\n    archive_saved_pointer current value: %d", rtcmem.var.archive_saved_pointer);
 }
 
+unsigned char handleTurnOffDevice(void){
+  Serial.print("\n\n Device set to turn off...");
+  statem.setState(STATE_SEALED);
+}
 
 bool handleChangeConfig(void){
   /*
     Open configuration file (JSON) and overwrite the values received. 
-    If any entry is invalid or blank/null, don't overwrite it.
+    If any entry is invalid or blank/null, don\\\"t overwrite it.
     Also data should be validated from both browser (Javascript code) 
     and this function too, in order to avoid errors.
   */
@@ -1134,6 +1147,33 @@ bool handleChangeConfig(void){
   }
 
   return false;
+}
+
+unsigned char handleGetParameters(void){
+  //Send configuration parameters to the client.
+  String parameters = "\"{";
+  parameters += "\\\"server_ap_ssid\\\":\\\""+String(config_globals.server_ap_ssid)+"\\\"";
+  parameters += ",\\\"server_ap_pass\\\":\\\""+String(config_globals.server_ap_pass)+"\\\"";
+  parameters += ",\\\"server_ip\\\":\\\""+String(config_globals.server_ip)+"\\\"";
+  parameters += ",\\\"server_port\\\":"+String(config_globals.server_port);
+  parameters += ",\\\"network_connection_timeout\\\":"+String(config_globals.network_connection_timeout);
+  parameters += ",\\\"server_connection_retry\\\":"+String(config_globals.server_connection_retry);
+  parameters += ",\\\"id_transceiver\\\":"+String(config_globals.id_transceiver);
+  parameters += ",\\\"id_sensor_a\\\":"+String(config_globals.id_sensor_a);
+  parameters += ",\\\"id_sensor_b\\\":"+String(config_globals.id_sensor_b);
+  parameters += ",\\\"id_sensor_c\\\":"+String(config_globals.id_sensor_c);
+  parameters += ",\\\"id_sensor_d\\\":"+String(config_globals.id_sensor_d);
+  parameters += ",\\\"sample_time\\\":"+String(config_globals.sample_time);
+
+  // parameters += ",\\\" \\\":"+String(config_globals.);
+
+
+  // parameters += ;
+
+
+  parameters += "}\"";
+  server.send(200, "text/plain", parameters);
+
 }
 
 /*

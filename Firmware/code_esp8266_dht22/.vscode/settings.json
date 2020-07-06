@@ -1,4 +1,14 @@
 {
     "C_Cpp.intelliSenseEngine": "Default",
-    "python.pythonPath": "C:\\Users\\BRUNO - PC\\AppData\\Local\\Programs\\Python\\Python37\\python.exe"
+    "python.pythonPath": "C:\\Users\\BRUNO - PC\\AppData\\Local\\Programs\\Python\\Python37\\python.exe",
+    "files.associations": {
+        "*.tcc": "cpp",
+        "exception": "cpp",
+        "fstream": "cpp",
+        "iosfwd": "cpp",
+        "new": "cpp",
+        "ostream": "cpp",
+        "sstream": "cpp",
+        "streambuf": "cpp"
+    }
 }
