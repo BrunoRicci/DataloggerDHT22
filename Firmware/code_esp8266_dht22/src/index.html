@@ -59,9 +59,9 @@
         <br>
         <br>
         <form method="POST" action="change_network_config">
-            <input type="text" placeholder="SSID" name="new_ssid" width="50%" border-radius="2px">
+            <input id="input_network_ap_ssid" type="text" placeholder="SSID" name="new_ssid" width="50%" border-radius="2px">
             <br>
-            <input type="text" placeholder="Password" name="new_password" width="50%">
+            <input id="input_network_ap_pass" type="text" placeholder="Password" name="new_password" width="50%">
             <br>
             <input class="button" type="submit" value="Modificar">
             
@@ -74,9 +74,9 @@
         <br>
         <br>
         <form method="POST" action="change_server_config" margin="10px">
-            <input type="text" placeholder="IPv4" name="ip" width="50%" border-radius="2px">
+            <input id="input_server_ip" type="text" placeholder="IPv4" name="ip" width="50%" border-radius="2px">
             <br>
-            <input type="text" placeholder="Puerto" name="port" width="50%">
+            <input id="input_server_port" type="text" placeholder="Puerto" name="port" width="50%">
             <br>
             <input class="button" type="submit" value="Modificar">
             
@@ -85,32 +85,31 @@
     <br><br>
     <div id="box_memory" class="box center">
         <b>Memorias</b>
-        <br>
-        <br>
+        <br><br>
         <button class="button" onclick="formatRam()">Formatear RAM</button>
         <button class="button" onclick="formatFlash()">Formatear FLASH</button>
         <button class="button" onclick="resetSentPointer()">Resetear puntero send</button>
     </div>
     <br><br>
 
-    <div id="device_config " class="box center">
+    <div id="input_device_config " class="box center">
         <b>Dispositivo</b>
         <p style="font-size: 12px;">Par&aacute;metros</p>
         <br>
         
         <div class="device_config">
             <label>Timeout conexi&oacute;n</label>
-            <input type="text" id="input_connection_timeout">
+            <input type="text" id="input_network_connection_timeout">
         </div>
         <br>
         <div class="device_config">
             <label>Reintentos de conexi&oacute;n</label>
-            <input type="text" id="input_connection_retries">
+            <input type="text" id="input_server_connection_retry">
         </div>
         <br>
         <div class="device_config">
             <label>ID Dispositivo</label>
-            <input type="text" id="input_transceiver_id">
+            <input type="text" id="input_id_transceiver">
         </div>
         <br>
         <div class="device_config">
@@ -138,8 +137,6 @@
             <input type="text" id="input_sample_time">
         </div>
 
-        
-
         <br>
         <button class="button" onclick="deviceConfig()">Cambiar par&aacute;metros</button>
         <br>
@@ -165,8 +162,8 @@
                 parameters = JSON.parse(JSON.parse(this.responseText));
                 console.log("parameters:", parameters);
                 
-                console.log(parameters["server_ap_ssid"]);
-                console.log(parameters["server_ap_pass"]);
+                console.log(parameters["network_ap_ssid"]);
+                console.log(parameters["network_ap_pass"]);
                 console.log(parameters["server_ip"]);
                 console.log(parameters["server_port"]);
                 console.log(parameters["network_connection_timeout"]);
@@ -176,9 +173,25 @@
                 console.log(parameters["id_sensor_b"]);
                 console.log(parameters["id_sensor_c"]);
                 console.log(parameters["id_sensor_d"]);
+                console.log(parameters["input_sample_time"]);
+
                 
+
+                document.querySelector("#input_network_ap_ssid").value = parameters["network_ap_ssid"];
+                document.querySelector("#input_network_ap_pass").value = parameters["network_ap_pass"];
+                document.querySelector("#input_server_ip").value = parameters["server_ip"];
+                document.querySelector("#input_server_port").value = parameters["server_port"];
+                document.querySelector("#input_network_connection_timeout").value = parameters["network_connection_timeout"];
+                document.querySelector("#input_server_connection_retry").value = parameters["server_connection_retry"];
+                document.querySelector("#input_id_transceiver").value = parameters["id_transceiver"];
+                document.querySelector("#input_id_sensor_a").value = parameters["id_sensor_a"];
+                document.querySelector("#input_id_sensor_b").value = parameters["id_sensor_b"];
+                document.querySelector("#input_id_sensor_c").value = parameters["id_sensor_c"];
+                document.querySelector("#input_id_sensor_d").value = parameters["id_sensor_d"];
+                document.querySelector("#input_sample_time").value = parameters["sample_time"];
+               
                 // console.log("JSON parsed:",JSON.parse(this.responseText));
-                debugger;
+               
                 //responseText should be separated into all the different values. See how to
                 // handle JSON from ESP8266...
             }
@@ -245,31 +258,39 @@
     }
 
     function deviceConfig() {
-      
+        
+        //Update values to variable.
+        parameters["network_ap_ssid"] = document.querySelector("#input_network_ap_ssid").value
+        parameters["network_ap_pass"] = document.querySelector("#input_network_ap_pass").value
+        parameters["server_ip"] = document.querySelector("#input_server_ip").value
+        parameters["server_port"] = document.querySelector("#input_server_port").value
+        parameters["network_connection_timeout"] = document.querySelector("#input_network_connection_timeout").value
+        parameters["server_connection_retry"] = document.querySelector("#input_server_connection_retry").value
+        parameters["id_transceiver"] = document.querySelector("#input_id_transceiver").value
+        parameters["id_sensor_a"] = document.querySelector("#input_id_sensor_a").value
+        parameters["id_sensor_b"] = document.querySelector("#input_id_sensor_b").value
+        parameters["id_sensor_c"] = document.querySelector("#input_id_sensor_c").value
+        parameters["id_sensor_d"] = document.querySelector("#input_id_sensor_d").value
+        parameters["sample_time"] = document.querySelector("#input_sample_time").value
 
-    }
-
-       
-    /* 
-    strcpy(config_globals.server_ap_ssid,"Fibertel WiFi866 2.4GHz");
-    strcpy(config_globals.server_ap_pass,"01416592736");
-    strcpy(config_globals.server_ip, "192.168.0.172");
-    strcpy(config_globals.wifi_security_type,"WPA2");
-
-    config_globals.server_port=8080;
-    config_globals.connection_retry=2;
-    config_globals.connection_timeout=20000;
-    config_globals.server_connection_timeout=2000;
-    config_globals.response_timeout=5000;
-    config_globals.id_transceiver=1;
-    config_globals.id_sensor_1=1;
-    config_globals.id_sensor_2=2;
-    config_globals.id_sensor_3=3;
-    config_globals.id_sensor_4=4;
-    config_globals.sample_time=3600;
-    config_globals.connection_time[0]=3;  //6:30 a.m. UTC
-    config_globals.connection_time[0]=30;
-     */
-
+        var xhttp = new XMLHttpRequest();
+        xhttp.open("POST", "device_config", true);     //Request to "/get_parameters" URL.
+        xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+        xhttp.send(
+            `network_ap_ssid=${parameters["network_ap_ssid"]}&
+            network_ap_pass=${parameters["network_ap_pass"]}&
+            server_ip=${parameters["server_ip"]}&
+            server_port=${parameters["server_port"]}&
+            network_connection_timeout=${parameters["network_connection_timeout"]}&
+            server_connection_retry=${parameters["server_connection_retry"]}&
+            id_transceiver=${parameters["id_transceiver"]}&
+            id_sensor_a=${parameters["id_sensor_a"]}&
+            id_sensor_b=${parameters["id_sensor_b"]}&
+            id_sensor_c=${parameters["id_sensor_c"]}&
+            id_sensor_d=${parameters["id_sensor_d"]}&
+            sample_time=${parameters["sample_time"]}
+            `
+        );   //Send request
+    }       
 </script>
 </html>

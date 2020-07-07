@@ -53,6 +53,8 @@ bool archiveWrite(void* data, uint16_t bytes);
 uint32_t archiveRead(void* data, uint32_t first_packet, uint32_t packets);
 uint32_t archiveGetPointer(void);
 bool initglobals(void);
+bool saveGlobals(void);
+Config_globals readGlobals(void);
 
 //Functions to handle web server
 void handleHome(void);
@@ -64,11 +66,13 @@ unsigned char handleFormatFlash(void);
 unsigned char handleResetSentPointer(void);
 unsigned char handleTurnOffDevice(void);
 unsigned char handleGetParameters(void);
+bool handleChangeConfig(void);
+
 //---------------------------------------------------------------------------------------------------------------------
 
 typedef struct{
-  char server_ap_ssid[31];
-  char server_ap_pass[31];   
+  char network_ap_ssid[31];
+  char network_ap_pass[31];   
   char server_ip[16];
   uint16_t server_port;
   char local_ip[16];      //192.168.255.255 ->15 + NULL
@@ -596,10 +600,10 @@ Measurement getMeasurements(void){
   delay(SENSOR_ON_TIME);  
   //GET MEASUREMENTS
   m.timestamp=rtcmem.getCurrentTime();  //Put current timestamp
-  m.id_sensor[0] = 1;   //Read sensor number from configuration file.
-  m.id_sensor[1] = 2; 
-  m.id_sensor[2] = 3; 
-  m.id_sensor[3] = 4;
+  m.id_sensor[0] = config_globals.id_sensor_a;   //Read sensor number from configuration file.
+  m.id_sensor[1] = config_globals.id_sensor_b; 
+  m.id_sensor[2] = config_globals.id_sensor_c; 
+  m.id_sensor[3] = config_globals.id_sensor_d;
   m.temperature[0] = generateMeasurementValue(TEMPERATURE, dht22_sensor_1.readTemperature());
   m.temperature[1] = generateMeasurementValue(TEMPERATURE, dht22_sensor_2.readTemperature());
   m.temperature[2] = generateMeasurementValue(TEMPERATURE, dht22_sensor_3.readTemperature());
@@ -659,7 +663,7 @@ String generatePOSTRequest(void* data, uint16_t packets){
     }
   }
   
-  request += "id_transceiver=1";      //? symbol deleted as it is not needed into POST method.
+  request += "id_transceiver="+(String)config_globals.id_transceiver;      //? symbol deleted as it is not needed into POST method.
   request += "&battery_level="+(String)getBatteryLevel();
   request += "&timestamp="+   values_timestamp;
   request += "&id_sensor="+   values_id_sensor;
@@ -694,7 +698,7 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
 
   wifiTurnOn(); //Turn on wifi.
   // Serial.setDebugOutput(true);  //DEBUG
-  WiFi.begin(config_globals.server_ap_ssid, config_globals.server_ap_pass);
+  WiFi.begin(config_globals.network_ap_ssid, config_globals.network_ap_pass);
   
   Serial.print("\nConnecting to network...");
   start_connection_time = millis();
@@ -918,47 +922,8 @@ bool initglobals(void){
   If file not found, load default values, defined in this function.
   */
 
-  void* p = &config_globals;
-  uint8_t buf[sizeof(Config_globals)]; //temporary buffer.
-
-  File file = SPIFFS.open(CONFIG_FILE_NAME, "r");   //Open file
-  if (file){        //If file opens correctly...
-     
-    // Serial.print("\n  Config_globals: ");  
-    for (uint16_t i = 0; i < sizeof(buf); i++)
-    {
-      buf[i] = file.read(); //Copies the read byte 
-      // Serial.printf("%X ",  buf[i]);
-    } 
-    memcpy(p, buf, sizeof(buf));  //Copies read data to the variable.
-    // rwVariables();  //Stores read data to RTC memory.    ////////////////// REMOVED FOR TESTING ///////////
-    return true;
-  }
-  else{     //Load default values.
-    // strcpy(config_globals.server_ap_ssid,"DATALOGGER SERVER");
-    // strcpy(config_globals.server_ap_pass,"!UBA12345!");
-    // strcpy(config_globals.server_ip, "192.168.137.1");
-    strcpy(config_globals.server_ap_ssid,"Fibertel WiFi866 2.4GHz");
-    strcpy(config_globals.server_ap_pass,"01416592736");
-    strcpy(config_globals.server_ip, "192.168.0.172");
-    strcpy(config_globals.local_ip,"192.168.4.1");
-    strcpy(config_globals.wifi_security_type,"WPA2");
-
-    config_globals.server_port=8080;
-    config_globals.server_connection_retry=2;
-    config_globals.network_connection_timeout=20000;
-    config_globals.server_connection_timeout=2000;
-    config_globals.response_timeout=5000;
-    config_globals.id_transceiver=1;
-    config_globals.id_sensor_a=1;
-    config_globals.id_sensor_b=2;
-    config_globals.id_sensor_c=3;
-    config_globals.id_sensor_d=4;
-    config_globals.sample_time=3600;
-    config_globals.connection_time[0]=3;  //6:30 a.m. UTC
-    config_globals.connection_time[0]=30;
-
-  }
+  config_globals = readGlobals();
+  
   return false;
 }
 
@@ -968,16 +933,26 @@ unsigned char runWebServer(void){
   String ap_ssid="Datalogger";
   String ap_pssw="123456789!";
   
-  //IPAddress local_IP(192,168,2,2);  //192.168.2.2
-  //IPAddress gateway(192,168,2,1);   //192.168.2.1
-  //IPAddress subnet(255,255,255,0);  //255.255.255.255
-  //WiFi.softAPConfig(local_IP, gateway, subnet);
-  
-  WiFi.mode(WIFI_AP);
+  // WiFi.softAPConfig(local_IP, gateway, subnet);
+  /* WiFi.mode(WIFI_AP);
   while(!WiFi.softAP(ap_ssid, ap_pssw))
   {
     Serial.println(".");
     delay(100);
+  } */
+ 
+  IPAddress local_IP(192,168,0,170);  //192.168.2.2
+  IPAddress gateway(192,168,0,1);   //192.168.2.1
+  IPAddress subnet(255,255,255,0);  //255.255.255.255
+  wifiTurnOn();
+  WiFi.config(local_IP, gateway, subnet);
+  WiFi.begin(config_globals.network_ap_ssid, config_globals.network_ap_pass);
+  while(WiFi.status() != WL_CONNECTED){ //Blocks until Wifi is connected. 
+    digitalWrite(LED_B_PIN, LOW); //Blink GREEN led.
+    delay(50);
+    digitalWrite(LED_B_PIN, HIGH);
+    
+    yield(); 
   }
 
   LED_Color(COLOR_YELLOW); //Turns on red LED.
@@ -1004,6 +979,7 @@ unsigned char runWebServer(void){
   server.on("/reset_archive_sent_pointer",handleResetSentPointer);
   server.on("/device_turn_off",handleTurnOffDevice);
   server.on("/get_parameters",handleGetParameters);
+  server.on("/device_config",handleChangeConfig);
 
 
   
@@ -1012,7 +988,7 @@ unsigned char runWebServer(void){
 }
 
 void handleHome(void){
-  Serial.print("/");
+  Serial.print("\n/");
   //Returns main page.
   server.send(200, "text/html", index_html);
 }
@@ -1023,9 +999,12 @@ void handleChangeNetworkConfig(void){
     
     if (server.hasArg("new_ssid") && server.hasArg("new_password"))
     {
-        new_ssid = server.arg("new_ssid");
-        new_password = server.arg("new_password");
+        // new_ssid = server.arg("new_ssid");
+        // new_password = server.arg("new_password");
+        server.arg(0).toCharArray(config_globals.network_ap_ssid, sizeof(config_globals.network_ap_ssid));
+        server.arg(1).toCharArray(config_globals.network_ap_pass, sizeof(config_globals.network_ap_pass));
         //Change parameters in Flash config file.
+        saveGlobals();
 
         server.send(200, "text/plain", "Network credentials modified correctly.");
         // Serial.printf("\nNetwork credentials modified:\nSSID:%s\nPass:%s",new_ssid,new_password);
@@ -1034,25 +1013,6 @@ void handleChangeNetworkConfig(void){
     {
         server.send(200, "text/html", "ERROR: Wrong parameters.");
     }
-
-  // uint8_t buf[RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4]; //24 Bytes
-  // readDataFromFlash(MEASUREMENTS_FILE_NAME, 0, buf, sizeof(buf));
-
-  Measurement m;  
-  for (uint16 i = 0; i < 12; i++)
-  {
-    // readDataFromFlash(MEASUREMENTS_FILE_NAME, i*RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4, &m, sizeof(buf));
-    archiveRead(&m, i, i);
-    Serial.printf("\nRead measurements from flash:   (index: %d)   data: \n",i*RTC_MEMORY_MEASUREMENT_BLOCK_SIZE*4);
-    Serial.printf("\ntimestamp: %d\n",m.timestamp);
-    Serial.printf("id_sen sor: [%d,%d,%d,%d] \n",m.id_sensor[0],m.id_sensor[1],m.id_sensor[2],m.id_sensor[3]);
-    Serial.printf("temperature: [%d,%d,%d,%d] \n",m.temperature[0],m.temperature[1],m.temperature[2],m.temperature[3]);
-    Serial.printf("humidity: [%d,%d,%d,%d] \n",m.humidity[0],m.humidity[1],m.humidity[2],m.humidity[3]);
-    Serial.print("----------------------------------\n\n");
-  }
- 
-  Serial.printf("\nArchive pointer: %d", archiveGetPointer());
-
 }
 
 void handleChangeServerConfig(void){
@@ -1064,6 +1024,10 @@ void handleChangeServerConfig(void){
       new_ip = server.arg("new_ip");
       new_port = server.arg("new_port");
       /* Validate ip and port number */
+      server.arg(0).toCharArray(config_globals.server_ip, sizeof(config_globals.server_ip));
+      config_globals.server_port=server.arg(1).toInt();
+
+      saveGlobals();
 
       //Change parameters in Flash config file.
       server.send(200, "text/plain", "Server parameters modified correctly.");
@@ -1124,14 +1088,59 @@ unsigned char handleTurnOffDevice(void){
 
 bool handleChangeConfig(void){
   /*
-    Open configuration file (JSON) and overwrite the values received. 
+    Open configuration file and overwrite the values received. 
     If any entry is invalid or blank/null, don\\\"t overwrite it.
     Also data should be validated from both browser (Javascript code) 
     and this function too, in order to avoid errors.
   */
- 
-  void* p = &config_globals;
+  //Number of args.
+  Serial.print("\n\n (/device_config) - args:\n");
+  for (uint16_t i = 0; i < server.args(); i++)
+  {
+      Serial.printf("\n arg %d->", i);
+      Serial.println(String(server.argName(i)));
+      Serial.println(String(server.arg(i)));
+  }
 
+  // server.arg(0).toCharArray(config_globals.network_ap_ssid, sizeof(config_globals.network_ap_ssid));
+  // server.arg(1).toCharArray(config_globals.network_ap_pass, sizeof(config_globals.network_ap_pass));
+  // server.arg(2).toCharArray(config_globals.server_ip, sizeof(config_globals.server_ip));
+  // server.arg("local_ip").toCharArray(config_globals.local_ip, sizeof(config_globals.local_ip));
+  // server.arg("wifi_security_type").toCharArray(config_globals.wifi_security_type, sizeof(config_globals.wifi_security_type));
+
+  // config_globals.server_port=server.arg(3).toInt();
+  config_globals.network_connection_timeout=server.arg(4).toInt();
+  config_globals.server_connection_retry=server.arg(5).toInt();
+  // config_globals.server_connection_timeout=server.arg("server_connection_timeout").toInt();
+  // config_globals.response_timeout=server.arg("response_timeout").toInt();
+  config_globals.id_transceiver=server.arg(6).toInt();
+  config_globals.id_sensor_a=server.arg(7).toInt();
+  config_globals.id_sensor_b=server.arg(8).toInt();
+  config_globals.id_sensor_c=server.arg(9).toInt();
+  config_globals.id_sensor_d=server.arg(10).toInt();
+  config_globals.sample_time=server.arg(11).toInt();
+  // config_globals.connection_time[0]=server.arg("").toInt();  //6:30 a.m. UTC
+  // config_globals.connection_time[0]=server.arg("").toInt();
+
+  Serial.print("\n Configuration parameters modified:\n");
+  Serial.print("\n network_ap_ssid:");
+  Serial.println(config_globals.network_ap_ssid);
+  Serial.print("\n network_ap_pass:");
+  Serial.println(config_globals.network_ap_pass);
+  Serial.print("\n server_ip:");
+  Serial.println(config_globals.server_ip);
+
+  Serial.printf("\n server_port: %d",config_globals.server_port);
+  Serial.printf("\n server_connection_retry: %d", config_globals.server_connection_retry);
+  Serial.printf("\n network_connection_timeout: %d", config_globals.network_connection_timeout);
+  Serial.printf("\n id_transceiver: %d", config_globals.id_transceiver);
+  Serial.printf("\n id_sensor_a: %d", config_globals.id_sensor_a);
+  Serial.printf("\n id_sensor_b: %d", config_globals.id_sensor_b);
+  Serial.printf("\n id_sensor_c: %d", config_globals.id_sensor_c);
+  Serial.printf("\n id_sensor_d: %d", config_globals.id_sensor_d);
+  Serial.printf("\n sample_time: %d", config_globals.sample_time);
+
+  /* void* p = &config_globals;
   File file = SPIFFS.open(CONFIG_FILE_NAME, "w");
   if (file) {       //If file opened correctly...
 
@@ -1146,14 +1155,17 @@ bool handleChangeConfig(void){
       return true;
   }
 
-  return false;
+  return false; */
+  saveGlobals();
+  server.send(200);   //Returns that everything is updated OK.
+  return true;
 }
 
 unsigned char handleGetParameters(void){
   //Send configuration parameters to the client.
   String parameters = "\"{";
-  parameters += "\\\"server_ap_ssid\\\":\\\""+String(config_globals.server_ap_ssid)+"\\\"";
-  parameters += ",\\\"server_ap_pass\\\":\\\""+String(config_globals.server_ap_pass)+"\\\"";
+  parameters += "\\\"network_ap_ssid\\\":\\\""+String(config_globals.network_ap_ssid)+"\\\"";
+  parameters += ",\\\"network_ap_pass\\\":\\\""+String(config_globals.network_ap_pass)+"\\\"";
   parameters += ",\\\"server_ip\\\":\\\""+String(config_globals.server_ip)+"\\\"";
   parameters += ",\\\"server_port\\\":"+String(config_globals.server_port);
   parameters += ",\\\"network_connection_timeout\\\":"+String(config_globals.network_connection_timeout);
@@ -1165,15 +1177,67 @@ unsigned char handleGetParameters(void){
   parameters += ",\\\"id_sensor_d\\\":"+String(config_globals.id_sensor_d);
   parameters += ",\\\"sample_time\\\":"+String(config_globals.sample_time);
 
-  // parameters += ",\\\" \\\":"+String(config_globals.);
-
-
-  // parameters += ;
-
-
   parameters += "}\"";
+  Serial.print("\n\nparameters sent to web interface:\n");
+  Serial.println(parameters);
   server.send(200, "text/plain", parameters);
 
+}
+
+bool saveGlobals(void){
+
+  Config_globals* g = &config_globals;
+
+  File file = SPIFFS.open(CONFIG_FILE_NAME, "W");   //Open file
+  if (file){
+    int bytesWritten = file.write((const char*)(g), sizeof(Config_globals)); //Overwrites previous data.
+    file.close();
+    return true;
+  }
+  return false;
+}
+
+Config_globals readGlobals(void){
+  Config_globals g;
+
+  uint8_t buf[sizeof(Config_globals)]; //temporary buffer.
+
+  File file = SPIFFS.open(CONFIG_FILE_NAME, "r");   //Open file
+  if (file){        //If file opens correctly...
+    // Serial.print("\n  Config_globals: ");  
+    for (uint16_t i = 0; i < sizeof(buf); i++)
+    {
+      buf[i] = file.read(); //Copies the read byte 
+      // Serial.printf("%X ",  buf[i]);
+    } 
+    memcpy(&g, buf, sizeof(buf));  //Copies read data to the variable.
+    // rwVariables();  //Stores read data to RTC memory.    ////////////////// REMOVED FOR TESTING ///////////
+    return g;
+  }
+  else{     //Load default values.
+    // strcpy(config_globals.server_ap_ssid,"DATALOGGER SERVER");
+    // strcpy(config_globals.server_ap_pass,"!UBA12345!");
+    // strcpy(config_globals.server_ip, "192.168.137.1");
+    strcpy(config_globals.network_ap_ssid,"Fibertel WiFi866 2.4GHz");
+    strcpy(config_globals.network_ap_pass,"01416592736");
+    strcpy(config_globals.server_ip, "192.168.0.172");
+    strcpy(config_globals.local_ip,"192.168.4.1");
+    strcpy(config_globals.wifi_security_type,"WPA2");
+
+    config_globals.server_port=8080;
+    config_globals.server_connection_retry=2;
+    config_globals.network_connection_timeout=20000;
+    config_globals.server_connection_timeout=2000;
+    config_globals.response_timeout=5000;
+    config_globals.id_transceiver=1;
+    config_globals.id_sensor_a=1;
+    config_globals.id_sensor_b=2;
+    config_globals.id_sensor_c=3;
+    config_globals.id_sensor_d=4;
+    config_globals.sample_time=3600;
+    config_globals.connection_time[0]=3;  //6:30 a.m. UTC
+    config_globals.connection_time[1]=30;
+  }
 }
 
 /*
