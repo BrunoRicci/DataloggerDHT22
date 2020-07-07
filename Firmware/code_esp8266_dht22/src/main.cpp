@@ -24,6 +24,35 @@ DHT dht22_sensor_2(DHT_SENSOR_2_PIN, DHTTYPE);    //Creates DHT22 sensor "sensor
 DHT dht22_sensor_3(DHT_SENSOR_3_PIN, DHTTYPE);    //Creates DHT22 sensor "sensor" object
 DHT dht22_sensor_4(DHT_SENSOR_4_PIN, DHTTYPE);    //Creates DHT22 sensor "sensor" object
 
+
+
+typedef struct{
+  char network_ap_ssid[31];
+  char network_ap_pass[31];   
+  char server_ip[16];
+  uint16_t server_port;
+  char local_ip[16];      //192.168.255.255 ->15 + NULL
+  char wifi_security_type[10];   //// enum wifi_security_type{WEP, WPA, WPA2, WPA2E};
+
+  uint8_t   server_connection_retry;     //amount of retrials to connect in case of failure. (def:1).
+  uint32_t  network_connection_timeout;   //milliseconds to try connecting  (def:5000).
+  uint32_t  response_timeout;     //milliseconds to await response  (def:2000).
+  uint32_t  server_connection_timeout;
+  // todo: evaluate which WPA2-Enterprise parameters are needed.
+  
+  uint16_t id_sensor_a;     //Parameters to put into POST request.
+  uint16_t id_sensor_b;
+  uint16_t id_sensor_c;
+  uint16_t id_sensor_d;
+  uint16_t id_transceiver;    
+
+  uint16_t  sample_time;    //lapse between measurements (in seconds)
+  uint8_t   connection_time[2]; //[hours][minutes]
+
+  uint8_t operation_mode;
+  bool ischarging;
+} Config_globals;
+
 //---------------------------------------------------------------------------------------------------------------------
 //Initialization functions.
 void portInit(void);
@@ -69,33 +98,6 @@ unsigned char handleGetParameters(void);
 bool handleChangeConfig(void);
 
 //---------------------------------------------------------------------------------------------------------------------
-
-typedef struct{
-  char network_ap_ssid[31];
-  char network_ap_pass[31];   
-  char server_ip[16];
-  uint16_t server_port;
-  char local_ip[16];      //192.168.255.255 ->15 + NULL
-  char wifi_security_type[10];   //// enum wifi_security_type{WEP, WPA, WPA2, WPA2E};
-
-  uint8_t   server_connection_retry;     //amount of retrials to connect in case of failure. (def:1).
-  uint32_t  network_connection_timeout;   //milliseconds to try connecting  (def:5000).
-  uint32_t  response_timeout;     //milliseconds to await response  (def:2000).
-  uint32_t  server_connection_timeout;
-  // todo: evaluate which WPA2-Enterprise parameters are needed.
-  
-  uint16_t id_sensor_a;     //Parameters to put into POST request.
-  uint16_t id_sensor_b;
-  uint16_t id_sensor_c;
-  uint16_t id_sensor_d;
-  uint16_t id_transceiver;    
-
-  uint16_t  sample_time;    //lapse between measurements (in seconds)
-  uint8_t   connection_time[2]; //[hours][minutes]
-
-  uint8_t operation_mode;
-  bool ischarging;
-} Config_globals;
 
 ESP8266WiFiMulti WiFiMulti;             //Wifi client side handle.
 ESP8266WebServer server(8080);          //Server for configuration.
@@ -933,27 +935,28 @@ unsigned char runWebServer(void){
   String ap_ssid="Datalogger";
   String ap_pssw="123456789!";
   
+  IPAddress local_IP(192,168,0,170);  //192.168.2.2
+  IPAddress gateway(192,168,0,1);   //192.168.2.1
+  IPAddress subnet(255,255,255,0);  //255.255.255.255
   // WiFi.softAPConfig(local_IP, gateway, subnet);
-  /* WiFi.mode(WIFI_AP);
+  WiFi.mode(WIFI_AP);
   while(!WiFi.softAP(ap_ssid, ap_pssw))
   {
     Serial.println(".");
     delay(100);
-  } */
- 
-  IPAddress local_IP(192,168,0,170);  //192.168.2.2
-  IPAddress gateway(192,168,0,1);   //192.168.2.1
-  IPAddress subnet(255,255,255,0);  //255.255.255.255
-  wifiTurnOn();
-  WiFi.config(local_IP, gateway, subnet);
-  WiFi.begin(config_globals.network_ap_ssid, config_globals.network_ap_pass);
-  while(WiFi.status() != WL_CONNECTED){ //Blocks until Wifi is connected. 
-    digitalWrite(LED_B_PIN, LOW); //Blink GREEN led.
-    delay(50);
-    digitalWrite(LED_B_PIN, HIGH);
-    
-    yield(); 
   }
+ 
+ 
+  // wifiTurnOn();
+  // WiFi.config(local_IP, gateway, subnet);
+  // WiFi.begin(config_globals.network_ap_ssid, config_globals.network_ap_pass);
+  // while(WiFi.status() != WL_CONNECTED){ //Blocks until Wifi is connected. 
+  //   digitalWrite(LED_B_PIN, LOW); //Blink GREEN led.
+  //   delay(50);
+  //   digitalWrite(LED_B_PIN, HIGH);
+    
+  //   yield(); 
+  // }
 
   LED_Color(COLOR_YELLOW); //Turns on red LED.
   //analogWriteFreq(5);   //See minimum frequency
@@ -1061,7 +1064,7 @@ unsigned char handleFormatFlash(void){
   if(SPIFFS.remove(MEASUREMENTS_FILE_NAME)){    //Delete file.
     //SPIFFS.format();
     SPIFFS.remove(NVM_POINTERS_FILE_NAME);    //Delete variables backup.
-    SPIFFS.remove(CONFIG_FILE_NAME);          //Delete 
+    // SPIFFS.remove(CONFIG_FILE_NAME);          //Delete 
     Serial.printf("\nFLASH Formatted.\n");
 
     rtcmem.clear();             //Write default values into rtc memory.
@@ -1185,10 +1188,12 @@ unsigned char handleGetParameters(void){
 }
 
 bool saveGlobals(void){
-
+  /*
+    SEE HOW TO SAVE TO EEPROM... (?)
+  */
   Config_globals* g = &config_globals;
 
-  File file = SPIFFS.open(CONFIG_FILE_NAME, "W");   //Open file
+  File file = SPIFFS.open(CONFIG_FILE_NAME, "w");   //Open file
   if (file){
     int bytesWritten = file.write((const char*)(g), sizeof(Config_globals)); //Overwrites previous data.
     file.close();
@@ -1210,23 +1215,21 @@ Config_globals readGlobals(void){
       buf[i] = file.read(); //Copies the read byte 
       // Serial.printf("%X ",  buf[i]);
     } 
+    file.close();
     memcpy(&g, buf, sizeof(buf));  //Copies read data to the variable.
     // rwVariables();  //Stores read data to RTC memory.    ////////////////// REMOVED FOR TESTING ///////////
     return g;
   }
   else{     //Load default values.
-    // strcpy(config_globals.server_ap_ssid,"DATALOGGER SERVER");
-    // strcpy(config_globals.server_ap_pass,"!UBA12345!");
-    // strcpy(config_globals.server_ip, "192.168.137.1");
-    strcpy(config_globals.network_ap_ssid,"Fibertel WiFi866 2.4GHz");
-    strcpy(config_globals.network_ap_pass,"01416592736");
-    strcpy(config_globals.server_ip, "192.168.0.172");
+    strcpy(config_globals.network_ap_ssid,"DATALOGGER SERVER");
+    strcpy(config_globals.network_ap_pass,"!UBA12345!");
+    strcpy(config_globals.server_ip, "192.168.0.123");
     strcpy(config_globals.local_ip,"192.168.4.1");
     strcpy(config_globals.wifi_security_type,"WPA2");
 
     config_globals.server_port=8080;
     config_globals.server_connection_retry=2;
-    config_globals.network_connection_timeout=20000;
+    config_globals.network_connection_timeout=7000;
     config_globals.server_connection_timeout=2000;
     config_globals.response_timeout=5000;
     config_globals.id_transceiver=1;
