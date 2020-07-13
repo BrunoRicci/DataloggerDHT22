@@ -102,6 +102,7 @@ typedef struct{
 #define MEASUREMENTS_FILE_NAME          "measurements.txt"
 #define CONFIG_FILE_NAME                "config.txt"
 #define NVM_POINTERS_FILE_NAME          "variables.txt"
+#define LOGS_FILE_NAME                  "logs.txt"
 
 //todo: MAKE DEFINE FOR MAXIMUM NUMBER OF PACKETS PER ARCHIVE READ AND WRITE OPERATION.
 /*---------------------------------------------------------*/

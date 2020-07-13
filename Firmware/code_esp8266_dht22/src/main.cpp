@@ -53,6 +53,13 @@ typedef struct{
   bool ischarging;
 } Config_globals;
 
+typedef struct{
+  uint32_t  timestamp;
+  uint8_t   battery_level;
+  uint8_t   event_type;
+  enum EventTypes {POWER_FAIL, FORCE_TURN_OFF, FORCE_MEASUREMENT, CONFIG_MODE} ;
+}Logs;
+
 //---------------------------------------------------------------------------------------------------------------------
 //Initialization functions.
 void portInit(void);
@@ -84,6 +91,8 @@ uint32_t archiveGetPointer(void);
 bool initglobals(void);
 bool saveGlobals(void);
 Config_globals readGlobals(void);
+bool log_event(uint16_t event_type);
+uint16_t read_log(void* data, uint16_t index=0, uint16_t amount=0);
 
 //Functions to handle web server
 void handleHome(void);
@@ -418,7 +427,7 @@ void dischargeCapacitor(void){
 
 void LED_Color(uint32_t color){   //8-bit colors
   uint16_t r, g, b;
-  Serial.printf("\n color: %X", color);
+  // Serial.printf("\n color: %X", color);
 
   r = (color >> 16) & 0xFF;
   g = (color >> 8) & 0xFF;
@@ -880,6 +889,9 @@ void goDeepSleep(uint64_t time){
   uint32_t t = time/1000;
  
   rtcmem.setElapsedTime(t + millis()/1000);   //in seconds
+  /*  If forced wake up, elapsed time should 
+  */
+  // rtcmem.setElapsedTime(t + millis()/1000);   //in seconds
 
   Serial.printf("\nGoing deep sleep for %d seconds... ", (t));
 
@@ -929,16 +941,73 @@ bool initglobals(void){
   return false;
 }
 
+bool log_event(uint16_t event_type){ 
+  /*
+    Log timestamp, battery status and event type into flash memory.
+  */
+  Logs l;
+  l.battery_level = getBatteryLevel();    //Current battery level.
+  l.timestamp = rtcmem.getCurrentTime();  //Current timestamp.
+  l.event_type = event_type;
+
+  File file = SPIFFS.open(LOGS_FILE_NAME, "a");   //Open file to append
+  if (file){
+    int bytesWritten = file.write((const char*)(&log), sizeof(Logs)); //Overwrites previous data.
+    file.close();
+    Serial.printf("\nEvent (type %d) logged.", l.event_type);
+    return true;
+  }
+  return false;
+}
+
+uint16_t read_log(void* data, uint16_t index, uint16_t amount){
+  /*  
+    Read "index" amount of logs, starting from the given index.
+      If amount is 0, it will return the number of logs saved.
+  */
+
+  File file = SPIFFS.open(LOGS_FILE_NAME, "r");   //Open file
+  if(file){
+    uint16_t size = file.size();
+
+    if(amount == 0 || index >= size) return size;
+
+    if(index+amount >= (size/sizeof(Logs))){   //If size exceeded, amount to read is modified.
+      amount = size - index;
+    }
+    
+    if(index + (amount * sizeof(Logs)) >= size){  //Avoid reading illegal values.
+      return 0;
+    }
+
+    file.seek(index, fs::SeekSet);    //Move the cursor "index" bytes from the beginning.
+    uint16 currpos = file.position();
+    Serial.printf("\ncurrpos = %d\n", currpos);
+    for (uint16 i = 0; i < (amount * sizeof(Logs)); i++)  //Read "bytes" number of bytes from the index position. 
+    {
+      ((uint8_t*)data)[i] = file.read(); 
+    } 
+    file.close();    //Close file.
+    return amount;
+  }
+  else{
+    Serial.printf("Failed to open [%s] file for reading", LOGS_FILE_NAME);
+    return 0;
+  }
+}
+ 
+
+
 //////////////////////////// WEB SERVER FUNCTIONS /////////////////////////////////
 unsigned char runWebServer(void){ 
 
   String ap_ssid="Datalogger";
   String ap_pssw="123456789!";
   
-  IPAddress local_IP(192,168,0,170);  //192.168.2.2
-  IPAddress gateway(192,168,0,1);   //192.168.2.1
+  IPAddress local_IP(192,168,0,170);  //192.168.0.170
+  IPAddress gateway(192,168,0,1);   //192.168.0.1
   IPAddress subnet(255,255,255,0);  //255.255.255.255
-  // WiFi.softAPConfig(local_IP, gateway, subnet);
+  WiFi.softAPConfig(local_IP, gateway, subnet);
   WiFi.mode(WIFI_AP);
   while(!WiFi.softAP(ap_ssid, ap_pssw))
   {
@@ -953,8 +1022,7 @@ unsigned char runWebServer(void){
   // while(WiFi.status() != WL_CONNECTED){ //Blocks until Wifi is connected. 
   //   digitalWrite(LED_B_PIN, LOW); //Blink GREEN led.
   //   delay(50);
-  //   digitalWrite(LED_B_PIN, HIGH);
-    
+  //   digitalWrite(LED_B_PIN, HIGH);  
   //   yield(); 
   // }
 
@@ -994,6 +1062,18 @@ void handleHome(void){
   Serial.print("\n/");
   //Returns main page.
   server.send(200, "text/html", index_html);
+  // log_event(Logs::CONFIG_MODE);
+
+  // char buf[100*sizeof(Logs)];
+  // Logs l;
+  // int q = read_log(buf, 0, 0);
+  // Serial.printf("\nLogs:");
+  // for (int i = 0; i < q; i++)
+  // {
+  //   memcpy(&l, &buf[i*sizeof(Logs)], sizeof(Logs));
+  //   Serial.printf("\ntimestamp: %d / battery_level:%d / event:%d",l.timestamp, l.battery_level, l.event_type);
+  // }
+
 }
 
 void handleChangeNetworkConfig(void){
@@ -1009,7 +1089,8 @@ void handleChangeNetworkConfig(void){
         //Change parameters in Flash config file.
         saveGlobals();
 
-        server.send(200, "text/plain", "Network credentials modified correctly.");
+        // server.send(200, "text/plain", "Network credentials modified correctly.");
+        server.send(200);
         // Serial.printf("\nNetwork credentials modified:\nSSID:%s\nPass:%s",new_ssid,new_password);
     }
     else
@@ -1033,7 +1114,8 @@ void handleChangeServerConfig(void){
       saveGlobals();
 
       //Change parameters in Flash config file.
-      server.send(200, "text/plain", "Server parameters modified correctly.");
+      // server.send(200, "text/plain", "Server parameters modified correctly.");
+      server.send(200);
       // Serial.printf("\nServer parameters modified:\nIP:%s\nPort:%s",new_ip,new_port);
   }
   else
@@ -1050,7 +1132,8 @@ unsigned char handleFormatRam(void){
       rtcmem.clear();                   //Reset values to dafault.
       rtcmem.safeDisconnect();          //Saves current values in NVM.
       Serial.printf("RAM Formatted.");
-      server.send(200, "text/plain", "Server parameters modified correctly.");
+      // server.send(200, "text/plain", "Server parameters modified correctly.");
+      server.send(200);
 
       return(1);  //Returns 1 to inform that RAM has been erased correctly. This should drive to a reboot.
     }
@@ -1064,6 +1147,7 @@ unsigned char handleFormatFlash(void){
   if(SPIFFS.remove(MEASUREMENTS_FILE_NAME)){    //Delete file.
     //SPIFFS.format();
     SPIFFS.remove(NVM_POINTERS_FILE_NAME);    //Delete variables backup.
+    SPIFFS.remove(LOGS_FILE_NAME);    //Delete logs file.
     // SPIFFS.remove(CONFIG_FILE_NAME);          //Delete 
     Serial.printf("\nFLASH Formatted.\n");
 
@@ -1223,16 +1307,16 @@ Config_globals readGlobals(void){
   else{     //Load default values.
     strcpy(config_globals.network_ap_ssid,"DATALOGGER SERVER");
     strcpy(config_globals.network_ap_pass,"!UBA12345!");
-    strcpy(config_globals.server_ip, "192.168.0.123");
-    strcpy(config_globals.local_ip,"192.168.4.1");
+    strcpy(config_globals.server_ip, "192.168.123.123");
+    strcpy(config_globals.local_ip,"192.168.123.2");
     strcpy(config_globals.wifi_security_type,"WPA2");
 
     config_globals.server_port=8080;
     config_globals.server_connection_retry=2;
-    config_globals.network_connection_timeout=7000;
+    config_globals.network_connection_timeout=10000;
     config_globals.server_connection_timeout=2000;
     config_globals.response_timeout=5000;
-    config_globals.id_transceiver=1;
+    config_globals.id_transceiver=0;
     config_globals.id_sensor_a=1;
     config_globals.id_sensor_b=2;
     config_globals.id_sensor_c=3;
@@ -1240,6 +1324,8 @@ Config_globals readGlobals(void){
     config_globals.sample_time=3600;
     config_globals.connection_time[0]=3;  //6:30 a.m. UTC
     config_globals.connection_time[1]=30;
+
+    saveGlobals();
   }
 }
 

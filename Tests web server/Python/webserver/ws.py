@@ -204,8 +204,8 @@ def format_flash():
     return('FLASH formatted.')
 
 try:
-    run(host='192.168.0.172', port=8080, reloader=True, debug=True)
-    # run(host='192.168.137.1', port=8080, reloader=True, debug=True)
+    #run(host='192.168.0.172', port=8080, reloader=True, debug=True)
+    run(host='192.168.123.123', port=8080, reloader=True, debug=True)
 finally:    #when to finish program...
     actual_db.finishConn()  #closes database connection.
     print('Program finished.')
