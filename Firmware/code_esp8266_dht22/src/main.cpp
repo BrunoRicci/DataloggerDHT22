@@ -113,7 +113,7 @@ ESP8266WebServer server(8080);          //Server for configuration.
 StateMachine statem(STATE_WAKE);  //Create StateMachine class object. Starts at wake.
 RtcMemory rtcmem;                       //Object to handle rtc memory.
 Config_globals config_globals;
-
+uint32_t idle_time_start;
 
 void setup() {
   wifiTurnOff();
@@ -148,7 +148,6 @@ void loop() {
     if(statem.stateInit()){ //State initialization.
       Serial.print("\n --- State: STATE_WAKE ---");
       wifiTurnOff();
-      // digitalWrite(15,HIGH);      //DEBUG.
       if(checkBattery()){ //If enough battery remaining...
         /*RTC and external interrupt are not differenced once 
         the device goes into deep sleep. It will always detect 
@@ -160,44 +159,42 @@ void loop() {
         Serial.printf("\n   %d:%d:%d (UTC)", hour(), minute(), second());
         Serial.printf("\n    %2d/%2d/%4d", day(), month(), year());
 
-
-        // if(reedSwitchIsPressed()){  //if external interrupt (switch was pressed)...
-        if(reedSwitchIsPressed()){  //if external interrupt (switch was pressed)...
-          Serial.print("\n\nExternal interrupt.");
-          
-          /*
-              To solve: When waking up from switch (not RTC interrupt), the time will unsincronize
-              as the device will go deep sleep from another full hour after that.
-
-              This affects only when the switch being pressed is not detected -> put capacitor to hold
-              the signal the time needed to boot.
-
-              A more effective way would be to get the actual value of RTC counter (in milliseconds) and compare
-              if it has reach the "timer module" -> if it does, this means the wake up was made by the timer and
-              not from the switch.
-          */  
-          if( ! isCharging()){   //If charger is not connected...
+        //Show reset reason:
+        rst_info *resetinfo;
+        resetinfo = ESP.getResetInfoPtr();
+        Serial.printf("\n Reset casue: ");
+        Serial.println(resetinfo->reason);
+        ///////////////////////////////////
+        
+        if (resetinfo->reason == rst_reason::REASON_DEEP_SLEEP_AWAKE){  //If woke up from deep sleep
+          if(reedSwitchIsPressed()){  //if external interrupt (switch was pressed)...
+            Serial.print("\n\nExternal interrupt.");
             statem.setState(STATE_FORCE_MEASUREMENT);    //Forces measurement.
+          }  
+          else{   //If switch was not pressed (RTC interrupt.)
+            Serial.print("\n\nRTC interrupt.");
+            statem.setState(STATE_GET_MEASUREMENTS);    //Normal measurement 
           }
-          else  //If charger is connected...
-          {
-            Serial.printf("\n awaiting hold for config mode...");
-            delay(SWITCH_HOLD_TIME_CONFIG);  //Waits for a moment...
-            if(reedSwitchIsPressed()){       //If switch is still pressed...
-              statem.setState(STATE_CONFIGURATION); //Go to configuration mode.    -> CONFIGURATION MODE DISABLED!!
-              //statem.setState(STATE_FORCE_MEASUREMENT);  //Forces measurement.
+        }
+        else if (resetinfo->reason == rst_reason::REASON_EXT_SYS_RST){  // If reset while running...
+          Serial.printf("\n awaiting hold for config mode...");
+          uint16_t cfg_time_start = millis();
+          while (reedSwitchIsPressed()){
+            yield();
+            if((millis() - cfg_time_start) >= SWITCH_HOLD_TIME_CONFIG){
+              statem.setState(STATE_CONFIGURATION); //Go to configuration mode.
+              break;
             }
-            else    //if not hold...
-              statem.setState(STATE_FORCE_MEASUREMENT);  //Forces measurement.
           }
-        }  
-        else{   //If switch was not pressed (RTC interrupt.)
-          Serial.print("\n\nRTC interrupt.");
-          statem.setState(STATE_GET_MEASUREMENTS);
+          if((millis() - cfg_time_start) < SWITCH_HOLD_TIME_CONFIG){
+            statem.setState(STATE_FORCE_MEASUREMENT);  //Forces measurement.
+          }
+        }
+        else{
+          statem.setState(STATE_FORCE_MEASUREMENT);  //Forces measurement.
         }
       }
-      else      //If out of battery.
-      {
+      else{ //If out of battery.
         statem.setState(STATE_SEALED);    //Turn off.
       }
     }  
@@ -284,15 +281,27 @@ void loop() {
     }
   }
   else if (statem.getState() == STATE_CONFIGURATION){
-   
+  
     if(statem.stateInit()){
       Serial.print("\n --- State: STATE_CONFIGURATION ---");
 
       runWebServer();   //Run web server.
+      uint32_t idle_time_start = millis(); 
+      
       // rtcmem.safeDisconnect();   //Better use this when entering configuration mode (save variables)
     }
 
     server.handleClient(); //Handling of incoming requests
+    
+    if(wifi_softap_get_station_num() > 0){  //If there is any station connected to the local AP...
+      idle_time_start = millis(); //Set new reference to current time.
+    }
+    else{
+      if((millis() - idle_time_start) >= CONFIG_MODE_IDLE_TIMEOUT){
+        statem.setState(STATE_DEEP_SLEEP);
+      }
+    }
+
   }
   else if (statem.getState() == STATE_SEALED){
     if(statem.stateInit()){
@@ -693,13 +702,7 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
       "packets" default value is 0, so if not specified in function call, it will send all the
       pending packets instead of the amount specified. 
   */
-  pinMode(LED_R_PIN, OUTPUT);
-  pinMode(LED_G_PIN, OUTPUT);
-  pinMode(LED_B_PIN, OUTPUT);
-  digitalWrite(LED_R_PIN, HIGH);    //Turn off leds.
-  digitalWrite(LED_G_PIN, HIGH);
-  digitalWrite(LED_B_PIN, HIGH);
-
+  LED_Color(0); // Turn off leds.
 
   HTTPClient http;
   uint16_t start_connection_time;
@@ -818,11 +821,11 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
     LED_Color(COLOR_RED);     //Blink red led.
     yield();
     delay(200);
-    LED_Color(COLOR_BLACK);;
-    LED_Color(COLOR_RED);; //Blink red led.
+    LED_Color(COLOR_BLACK);
+    LED_Color(COLOR_RED); //Blink red led.
     yield();
     delay(200);
-    LED_Color(COLOR_BLACK);;
+    LED_Color(COLOR_BLACK);
 
     return 0;
     //Connection failed.
@@ -1062,6 +1065,7 @@ void handleHome(void){
   Serial.print("\n/");
   //Returns main page.
   server.send(200, "text/html", index_html);
+  Serial.printf("\n\n    Number of clients connected: %d", wifi_softap_get_station_num());
   // log_event(Logs::CONFIG_MODE);
 
   // char buf[100*sizeof(Logs)];
@@ -1090,7 +1094,8 @@ void handleChangeNetworkConfig(void){
         saveGlobals();
 
         // server.send(200, "text/plain", "Network credentials modified correctly.");
-        server.send(200);
+        server.send(200);   //Return code 200 (OK).
+
         // Serial.printf("\nNetwork credentials modified:\nSSID:%s\nPass:%s",new_ssid,new_password);
     }
     else
@@ -1115,12 +1120,13 @@ void handleChangeServerConfig(void){
 
       //Change parameters in Flash config file.
       // server.send(200, "text/plain", "Server parameters modified correctly.");
-      server.send(200);
+      server.send(200);   //Return code 200 (OK).
       // Serial.printf("\nServer parameters modified:\nIP:%s\nPort:%s",new_ip,new_port);
   }
   else
   {
       server.send(200, "text/html", "ERROR: Wrong parameters.");
+      server.send
   } 
 }
 
@@ -1133,7 +1139,7 @@ unsigned char handleFormatRam(void){
       rtcmem.safeDisconnect();          //Saves current values in NVM.
       Serial.printf("RAM Formatted.");
       // server.send(200, "text/plain", "Server parameters modified correctly.");
-      server.send(200);
+      server.send(200);   //Return code 200 (OK).
 
       return(1);  //Returns 1 to inform that RAM has been erased correctly. This should drive to a reboot.
     }
@@ -1154,6 +1160,8 @@ unsigned char handleFormatFlash(void){
     rtcmem.clear();             //Write default values into rtc memory.
     rtcmem.safeDisconnect();    //Saves default values into NVM.
 
+    server.send(200);   //Return code 200 (OK).
+
     return(1);  //Returns 1 to inform that FLASH has been erased correctly. This should drive to a reboot.
   }
   else return 0;
@@ -1164,6 +1172,7 @@ unsigned char handleResetSentPointer(void){
   Serial.print("\nresetting archive_sent_pointer...");
   rtcmem.var.archive_sent_pointer = 0;
   rtcmem.rwVariables();   //Save variables to RTC memory.
+  server.send(200);   //Return code 200 (OK).
   Serial.printf("\n\n    archive_sent_pointer reset. New value: %d", rtcmem.var.archive_sent_pointer);
   Serial.printf("\n\n    archive_saved_pointer current value: %d", rtcmem.var.archive_saved_pointer);
 }
