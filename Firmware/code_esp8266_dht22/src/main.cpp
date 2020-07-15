@@ -1126,7 +1126,6 @@ void handleChangeServerConfig(void){
   else
   {
       server.send(200, "text/html", "ERROR: Wrong parameters.");
-      server.send
   } 
 }
 

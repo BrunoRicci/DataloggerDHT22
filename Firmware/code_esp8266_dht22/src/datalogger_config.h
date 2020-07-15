@@ -17,8 +17,8 @@
 #define TEMPERATURE     1
 #define HUMIDITY        2
 
-#define SWITCH_HOLD_TIME_CONFIG         5000            //Time to hold the switch until config mode is activated (in milliseconds)
-
+#define SWITCH_HOLD_TIME_CONFIG         10000            //Time to hold the switch until config mode is activated (in milliseconds)
+#define CONFIG_MODE_IDLE_TIMEOUT        40000           //Time to automatically exit config mode if no device connected.      
 
 //Sensor model (DHT sensor library configuration).
 #define DHTTYPE DHT22     
