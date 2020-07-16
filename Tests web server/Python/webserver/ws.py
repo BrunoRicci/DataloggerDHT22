@@ -22,7 +22,7 @@ DB_COLUMN_NAME_HUMIDITY = 'HUMIDITY'
 localdir = str(sys.path[0])
 def initDB(dir, nameDB):   
     print('DB directory to open: ' + str(dir + '\\' + nameDB))   #debug
-    db = dataeng.DataEngine( dir + '\\' + nameDB, debugmode=True)  #Create DataEngine object with the database directory.  Will create dir if it doesn't exist.
+    db = dataeng.DataEngine( dir + '\\' + nameDB, debugmode=False)  #Create DataEngine object with the database directory.  Will create dir if it doesn't exist.
     # db = dataeng.sqlite3.connect(dir + '\\' + nameDB)  # Access a database. Create it if doesn't exist.
     # print('db = ' + str(db))
     return db

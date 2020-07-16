@@ -105,7 +105,7 @@ const char index_html[] PROGMEM = R"rawliteral(
         <br>
         
         <div class="device_config">
-            <label>Timeout conexi&oacute;n</label>
+            <label>Timeout conexi&oacute;n (ms)</label>
             <input type="text" id="input_network_connection_timeout">
         </div>
         <br>
@@ -140,7 +140,7 @@ const char index_html[] PROGMEM = R"rawliteral(
         </div>
         <br>
         <div class="device_config">
-            <label>Tiempo muestreo</label>
+            <label>Tiempo muestreo (seg)</label>
             <input type="text" id="input_sample_time">
         </div>
 

@@ -285,9 +285,7 @@ void loop() {
     if(statem.stateInit()){
       Serial.print("\n --- State: STATE_CONFIGURATION ---");
 
-      runWebServer();   //Run web server.
-      uint32_t idle_time_start = millis(); 
-      
+      runWebServer();   //Run web server.      
       // rtcmem.safeDisconnect();   //Better use this when entering configuration mode (save variables)
     }
 
@@ -711,19 +709,20 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
   // bool network_connection_timeout=false, request_timeout=false;
 
   wifiTurnOn(); //Turn on wifi.
-  // Serial.setDebugOutput(true);  //DEBUG
+  Serial.setDebugOutput(true);  //DEBUG
+  // WiFi.config(IPAddress(192,168,123,106), IPAddress(192,168,123,1),IPAddress(255,255,255,0));    //Fixed IP configuration.  
+  //   Serial.print("Local IP: ");
+  // Serial.println(WiFi.localIP());
   WiFi.begin(config_globals.network_ap_ssid, config_globals.network_ap_pass);
-  
+  LED_Color(COLOR_BLUE);
+      
   Serial.print("\nConnecting to network...");
   start_connection_time = millis();
   while(WiFi.status() != WL_CONNECTED && (millis() - start_connection_time < config_globals.network_connection_timeout)){ //Blocks until Wifi is connected. 
-    digitalWrite(LED_B_PIN, LOW); //Blink GREEN led.
-    delay(50);
-    digitalWrite(LED_B_PIN, HIGH);
-    
     yield(); 
   }
-  digitalWrite(LED_B_PIN, HIGH);
+  LED_Color(COLOR_BLACK);
+  Serial.println(WiFi.localIP());
 
   if(WiFi.status() == WL_CONNECTED){
     
@@ -999,6 +998,63 @@ uint16_t read_log(void* data, uint16_t index, uint16_t amount){
   }
 }
  
+bool saveGlobals(void){
+  /*
+    SEE HOW TO SAVE TO EEPROM... (?)
+  */
+  Config_globals* g = &config_globals;
+
+  File file = SPIFFS.open(CONFIG_FILE_NAME, "w");   //Open file
+  if (file){
+    int bytesWritten = file.write((const char*)(g), sizeof(Config_globals)); //Overwrites previous data.
+    file.close();
+    return true;
+  }
+  return false;
+}
+
+Config_globals readGlobals(void){
+  Config_globals g;
+
+  uint8_t buf[sizeof(Config_globals)]; //temporary buffer.
+
+  File file = SPIFFS.open(CONFIG_FILE_NAME, "r");   //Open file
+  if (file){        //If file opens correctly...
+    // Serial.print("\n  Config_globals: ");  
+    for (uint16_t i = 0; i < sizeof(buf); i++)
+    {
+      buf[i] = file.read(); //Copies the read byte 
+      // Serial.printf("%X ",  buf[i]);
+    } 
+    file.close();
+    memcpy(&g, buf, sizeof(buf));  //Copies read data to the variable.
+    // rwVariables();  //Stores read data to RTC memory.    ////////////////// REMOVED FOR TESTING ///////////
+    return g;
+  }
+  else{     //Load default values.
+    strcpy(config_globals.network_ap_ssid,"DATALOGGER SERVER");
+    strcpy(config_globals.network_ap_pass,"!UBA12345!");
+    strcpy(config_globals.server_ip, "192.168.123.123");
+    strcpy(config_globals.local_ip,"192.168.123.2");
+    strcpy(config_globals.wifi_security_type,"WPA2");
+
+    config_globals.server_port=8080;
+    config_globals.server_connection_retry=2;
+    config_globals.network_connection_timeout=10000;
+    config_globals.server_connection_timeout=2000;
+    config_globals.response_timeout=5000;
+    config_globals.id_transceiver=0;
+    config_globals.id_sensor_a=1;
+    config_globals.id_sensor_b=2;
+    config_globals.id_sensor_c=3;
+    config_globals.id_sensor_d=4;
+    config_globals.sample_time=3600;
+    config_globals.connection_time[0]=3;  //6:30 a.m. UTC
+    config_globals.connection_time[1]=30;
+
+    saveGlobals();
+  }
+}
 
 
 //////////////////////////// WEB SERVER FUNCTIONS /////////////////////////////////
@@ -1276,66 +1332,8 @@ unsigned char handleGetParameters(void){
   Serial.print("\n\nparameters sent to web interface:\n");
   Serial.println(parameters);
   server.send(200, "text/plain", parameters);
-
 }
 
-bool saveGlobals(void){
-  /*
-    SEE HOW TO SAVE TO EEPROM... (?)
-  */
-  Config_globals* g = &config_globals;
-
-  File file = SPIFFS.open(CONFIG_FILE_NAME, "w");   //Open file
-  if (file){
-    int bytesWritten = file.write((const char*)(g), sizeof(Config_globals)); //Overwrites previous data.
-    file.close();
-    return true;
-  }
-  return false;
-}
-
-Config_globals readGlobals(void){
-  Config_globals g;
-
-  uint8_t buf[sizeof(Config_globals)]; //temporary buffer.
-
-  File file = SPIFFS.open(CONFIG_FILE_NAME, "r");   //Open file
-  if (file){        //If file opens correctly...
-    // Serial.print("\n  Config_globals: ");  
-    for (uint16_t i = 0; i < sizeof(buf); i++)
-    {
-      buf[i] = file.read(); //Copies the read byte 
-      // Serial.printf("%X ",  buf[i]);
-    } 
-    file.close();
-    memcpy(&g, buf, sizeof(buf));  //Copies read data to the variable.
-    // rwVariables();  //Stores read data to RTC memory.    ////////////////// REMOVED FOR TESTING ///////////
-    return g;
-  }
-  else{     //Load default values.
-    strcpy(config_globals.network_ap_ssid,"DATALOGGER SERVER");
-    strcpy(config_globals.network_ap_pass,"!UBA12345!");
-    strcpy(config_globals.server_ip, "192.168.123.123");
-    strcpy(config_globals.local_ip,"192.168.123.2");
-    strcpy(config_globals.wifi_security_type,"WPA2");
-
-    config_globals.server_port=8080;
-    config_globals.server_connection_retry=2;
-    config_globals.network_connection_timeout=10000;
-    config_globals.server_connection_timeout=2000;
-    config_globals.response_timeout=5000;
-    config_globals.id_transceiver=0;
-    config_globals.id_sensor_a=1;
-    config_globals.id_sensor_b=2;
-    config_globals.id_sensor_c=3;
-    config_globals.id_sensor_d=4;
-    config_globals.sample_time=3600;
-    config_globals.connection_time[0]=3;  //6:30 a.m. UTC
-    config_globals.connection_time[1]=30;
-
-    saveGlobals();
-  }
-}
 
 /*
     Make funcions to:
