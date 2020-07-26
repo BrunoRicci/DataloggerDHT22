@@ -92,11 +92,11 @@ def handleReceivedData(dict_data):
             try:
                 actual_db.writeData(MEASUREMENTS_TABLE_NAME, columns, values)   #Save to database.
             except IndexError:  
-                print("Exception.\n")
+                print("\nException.\n")
                 print(" - - - - - Timestamp: "+str(dict_data["timestamp"]))
                 time_modifier = time_modifier + 1
                 print("Time modifier: "+str(time_modifier))
-                print( "Has duplicates: "+str( len(set(dict_data["timestamp"])) ) )
+                #print( "Has duplicates: "+str( len(set(dict_data["timestamp"])) ) )
             else:       #If data saved correcly...
                 try:    #Try to save the status data. If timestamp (composite primary key) is repeated in the table, it will throw an exception.
                     actual_db.writeData(DEVICES_STATE_TABLE_NAME,                           #Logs devices state.
@@ -205,7 +205,7 @@ def format_flash():
 
 try:
     #run(host='192.168.0.172', port=8080, reloader=True, debug=True)
-    run(host='192.168.123.123', port=8080, reloader=True, debug=True)
+    run(host='192.168.1.101', port=8080, reloader=True, debug=True)
 finally:    #when to finish program...
     actual_db.finishConn()  #closes database connection.
     print('Program finished.')

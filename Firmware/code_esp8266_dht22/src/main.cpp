@@ -177,21 +177,27 @@ void loop() {
           }
         }
         else if (resetinfo->reason == rst_reason::REASON_EXT_SYS_RST){  // If reset while running...
-          Serial.printf("\n awaiting hold for config mode...");
           uint16_t cfg_time_start = millis();
-          while (reedSwitchIsPressed()){
-            yield();
-            if((millis() - cfg_time_start) >= SWITCH_HOLD_TIME_CONFIG){
-              statem.setState(STATE_CONFIGURATION); //Go to configuration mode.
-              break;
+          if (getBatteryLevel() == 100){  //Protection for when it's not connected to USB charger.
+            Serial.printf("\n awaiting hold for config mode...");
+            while (reedSwitchIsPressed()){
+              yield();
+              if((millis() - cfg_time_start) >= SWITCH_HOLD_TIME_CONFIG){
+                statem.setState(STATE_CONFIGURATION); //Go to configuration mode.
+                break;
+              }
+            }
+            if((millis() - cfg_time_start) < SWITCH_HOLD_TIME_CONFIG){
+              statem.setState(STATE_FORCE_MEASUREMENT);  //Forces measurement.
             }
           }
-          if((millis() - cfg_time_start) < SWITCH_HOLD_TIME_CONFIG){
+          else{
             statem.setState(STATE_FORCE_MEASUREMENT);  //Forces measurement.
           }
         }
         else{
-          statem.setState(STATE_FORCE_MEASUREMENT);  //Forces measurement.
+          statem.setState(STATE_FORCE_MEASUREMENT);   //Forces measurement -> If reboots for another reason, 
+                                                      //connects to server so low battery level can be checked remotely...
         }
       }
       else{ //If out of battery.
@@ -362,10 +368,10 @@ void setBatteryState(uint8 state){
 
 uint8_t getBatteryLevel(void){
   //It is necessary to turn on the sensors in order to measure the battery level:
-  setSensorPower(ON);
-  delay(10);  //10ms delay...
+  // setSensorPower(ON);
+  // delay(10);  //10ms delay...
   uint16 adcr = analogRead(BATTERY_SENSE_PIN);
-  setSensorPower(OFF);
+  // setSensorPower(OFF);
 
   uint16_t voltage = (uint16_t)((adcr * ADC_VOLTAGE_MV)/(1023)); //Read value
   // Serial.printf("\nVoltage = %dmV" ,voltage);
