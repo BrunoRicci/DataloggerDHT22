@@ -177,23 +177,61 @@ void loop() {
           }
         }
         else if (resetinfo->reason == rst_reason::REASON_EXT_SYS_RST){  // If reset while running...
-          uint16_t cfg_time_start = millis();
-          if (getBatteryLevel() == 100){  //Protection for when it's not connected to USB charger.
-            Serial.printf("\n awaiting hold for config mode...");
-            while (reedSwitchIsPressed()){
-              yield();
-              if((millis() - cfg_time_start) >= SWITCH_HOLD_TIME_CONFIG){
+          
+          LED_Color(COLOR_VIOLET);
+          delay(500);
+          String serialdata = Serial.readString();
+          uint32_t t;
+
+          if(! serialdata.isEmpty() ){  //If received any data...
+
+
+            t = serialdata.toInt();
+            if (t > 0 && t < 4294967296 ){ //Validate value -> if t=0, the value is not int.
+              Serial.print(MSG_SYNC_TIME);
+              Serial.printf("\n New time value: %d", t);
+              // t -= config_globals.sample_time;  //Substract 1 hour for the hour that will be summed after this deep sleep.
+              rtcmem.var.current_time=t;  //Saves updated time.
+              rtcmem.rwVariables();
+              statem.setState(STATE_FORCE_MEASUREMENT);  //Forces measurement.
+            }
+            else{ //If data was not integer (string)
+
+              if (serialdata == COMMAND_FORCE_MEASUREMENT)
+              {
+                Serial.print("\n Force measurement command received.");
+                statem.setState(STATE_FORCE_MEASUREMENT);  //Forces measurement.
+              }
+              else if (serialdata == COMMAND_CONFIG_MODE)
+              {
+                Serial.print("\n Config mode command received.");
                 statem.setState(STATE_CONFIGURATION); //Go to configuration mode.
-                break;
+              }
+              
+              
+
+            }       
+          }
+          else{
+            uint16_t cfg_time_start = millis();
+            if (getBatteryLevel() == 100){  //Protection for when it's not connected to USB charger.
+              Serial.printf("\n awaiting hold for config mode...");
+              while (reedSwitchIsPressed()){
+                yield();
+                if((millis() - cfg_time_start) >= SWITCH_HOLD_TIME_CONFIG){
+                  statem.setState(STATE_CONFIGURATION); //Go to configuration mode.
+                  break;
+                }
+              }
+              if((millis() - cfg_time_start) < SWITCH_HOLD_TIME_CONFIG){
+                statem.setState(STATE_FORCE_MEASUREMENT);  //Forces measurement.
               }
             }
-            if((millis() - cfg_time_start) < SWITCH_HOLD_TIME_CONFIG){
+            else{
               statem.setState(STATE_FORCE_MEASUREMENT);  //Forces measurement.
             }
           }
-          else{
-            statem.setState(STATE_FORCE_MEASUREMENT);  //Forces measurement.
-          }
+
         }
         else{
           statem.setState(STATE_FORCE_MEASUREMENT);   //Forces measurement -> If reboots for another reason, 

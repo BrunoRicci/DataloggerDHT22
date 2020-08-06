@@ -121,6 +121,9 @@ typedef struct{
 #define GET_TIME_URL            "/gettime"
 #define MAX_PACKET_PER_REQUEST       12      //Maximum number of packets to send per request.
 
+#define MSG_SYNC_TIME  "Time updated."
+#define COMMAND_FORCE_MEASUREMENT       "FORCE_MEASUREMENT"
+#define COMMAND_CONFIG_MODE             "CONFIG_MODE"
 
 
 #endif  //__DATALOGGER_CONFIG_HPP_INCLUDED__
