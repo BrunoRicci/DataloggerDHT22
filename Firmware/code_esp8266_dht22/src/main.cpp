@@ -7,6 +7,7 @@
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
 #include <TimeLib.h>
+#include <TimeAlarms.h>   // https://forum.arduino.cc/index.php?topic=37693.0
 
 #include <datalogger_config.h>  //Configuration parameters.
 
@@ -75,6 +76,7 @@ bool reedSwitchIsPressed(void);
 void dischargeCapacitor(void);
 void LED_Color(uint32 color);
 
+
 void* stringToArray(std::string origin_string);
 int32_t generateMeasurementValue(unsigned char type, float value);
 String formatMeasurementValue(unsigned char type, float value);  //Converts measurements into valid format
@@ -82,6 +84,7 @@ String generatePOSTRequest(void* data, uint16_t packets);
 uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets=0);
 Measurement getMeasurements(void);
 uint32_t getServerTimeUnix(void);
+void scheduleConnect(void);
 
 bool writeDataToFlash(String path, void* data, unsigned int bytes);
 bool readDataFromFlash(String path, uint32_t index, void* data, unsigned int bytes);
@@ -115,6 +118,8 @@ RtcMemory rtcmem;                       //Object to handle rtc memory.
 Config_globals config_globals;
 uint32_t idle_time_start;
 
+
+
 void setup() {
   wifiTurnOff();
   portInit();
@@ -125,7 +130,7 @@ void setup() {
 
   Serial.begin(115200);
   
-   //Checks if device has lost power supply.
+  //Checks if device has lost power supply.
   if(rtcmem.checkPowerdown()){
     setBatteryState(ON);  //Connect battery.
     if(rtcmem.initialize())  //Recovers variables
@@ -171,9 +176,18 @@ void loop() {
             Serial.print("\n\nExternal interrupt.");
             statem.setState(STATE_FORCE_MEASUREMENT);    //Forces measurement.
           }  
-          else{   //If switch was not pressed (RTC interrupt.)
+          else{             //If switch was not pressed (RTC interrupt.)
             Serial.print("\n\nRTC interrupt.");
-            statem.setState(STATE_GET_MEASUREMENTS);    //Normal measurement 
+            
+              //GMT-3 time                            hours
+            if(config_globals.connection_time[0] == (hour()-3)){  //FIXME: This only works with hourly wake-up, where this value won't repeat multiple times a day.
+                Serial.printf("\nSchedule connection. Hours: %d",(hour()-3));
+                scheduleConnect();
+                statem.setState(STATE_FORCE_MEASUREMENT);
+            }
+            else{
+              statem.setState(STATE_GET_MEASUREMENTS);    //Normal measurement 
+            }
           }
         }
         else if (resetinfo->reason == rst_reason::REASON_EXT_SYS_RST){  // If reset while running...
@@ -762,7 +776,8 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
       
   Serial.print("\nConnecting to network...");
   start_connection_time = millis();
-  while(WiFi.status() != WL_CONNECTED && (millis() - start_connection_time < config_globals.network_connection_timeout)){ //Blocks until Wifi is connected. 
+  //Blocks until Wifi is connected. 
+  while(WiFi.status() != WL_CONNECTED && (millis() - start_connection_time < config_globals.network_connection_timeout)){ 
     yield(); 
   }
   LED_Color(COLOR_BLACK);
@@ -802,8 +817,8 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
       String request = generatePOSTRequest(buf, n); //Generate request with n elements.
       Serial.print("\n[HTTP] POST...:\n");  Serial.print(request);
 
-      http.addHeader("Content-Type", "text/plain");  //Specify content-type header
-      int httpCode = http.POST(request);   //Send the request
+      http.addHeader("Content-Type", "text/plain");  //Specify content-type header.
+      int httpCode = http.POST(request);   //Send the request.
       if(httpCode > 0){
         String payload = http.getString();  
         Serial.print("\n Response:"); Serial.println(payload);  
@@ -881,6 +896,14 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
 uint32_t getServerTimeUnix(void){ //Obsolete!!
   //Cnnects to server, sends a request and returns unix time in UTC from server.
   return 0;
+}
+
+void scheduleConnect(void){
+  LED_Color(COLOR_GREEN);
+  Alarm.delay(750);
+  LED_Color(COLOR_BLACK);
+  Serial.print("\n- - - - - - - Scheduled alarm. - - - - - - -\n");
+  // if(sendMeasurements(0,0)) return true; else return false;
 }
 
 int32_t generateMeasurementValue(unsigned char type, float value){
