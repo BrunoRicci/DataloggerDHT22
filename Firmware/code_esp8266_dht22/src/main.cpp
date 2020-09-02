@@ -30,7 +30,7 @@ DHT dht22_sensor_4(DHT_SENSOR_4_PIN, DHTTYPE);    //Creates DHT22 sensor "sensor
 typedef struct{
   char network_ap_ssid[31];
   char network_ap_pass[31];   
-  char server_ip[16];
+  char server_ip[64];
   uint16_t server_port;
   char local_ip[16];      //192.168.255.255 ->15 + NULL
   char wifi_security_type[10];   //// enum wifi_security_type{WEP, WPA, WPA2, WPA2E};
@@ -180,9 +180,9 @@ void loop() {
             Serial.print("\n\nRTC interrupt.");
             
               //GMT-3 time                            hours
-            if(config_globals.connection_time[0] == (hour()-3)){  //FIXME: This only works with hourly wake-up, where this value won't repeat multiple times a day.
-                Serial.printf("\nSchedule connection. Hours: %d",(hour()-3));
-                scheduleConnect();
+            if(config_globals.connection_time[0] == hour()){  //FIXME: This only works with hourly wake-up, where this value won't repeat multiple times a day.
+                Serial.printf("\nSchedule connection. Hours: %d (UTC)",hour());
+                // scheduleConnect();
                 statem.setState(STATE_FORCE_MEASUREMENT);
             }
             else{
@@ -193,13 +193,12 @@ void loop() {
         else if (resetinfo->reason == rst_reason::REASON_EXT_SYS_RST){  // If reset while running...
           
           LED_Color(COLOR_VIOLET);
+          Serial.flush();
           delay(500);
           String serialdata = Serial.readString();
           uint32_t t;
 
           if(! serialdata.isEmpty() ){  //If received any data...
-
-
             t = serialdata.toInt();
             if (t > 0 && t < 4294967296 ){ //Validate value -> if t=0, the value is not int.
               Serial.print(MSG_SYNC_TIME);
@@ -210,7 +209,6 @@ void loop() {
               statem.setState(STATE_FORCE_MEASUREMENT);  //Forces measurement.
             }
             else{ //If data was not integer (string)
-
               if (serialdata == COMMAND_FORCE_MEASUREMENT)
               {
                 Serial.print("\n Force measurement command received.");
@@ -221,9 +219,6 @@ void loop() {
                 Serial.print("\n Config mode command received.");
                 statem.setState(STATE_CONFIGURATION); //Go to configuration mode.
               }
-              
-              
-
             }       
           }
           else{
@@ -245,7 +240,6 @@ void loop() {
               statem.setState(STATE_FORCE_MEASUREMENT);  //Forces measurement.
             }
           }
-
         }
         else{
           statem.setState(STATE_FORCE_MEASUREMENT);   //Forces measurement -> If reboots for another reason, 
@@ -688,9 +682,15 @@ Measurement getMeasurements(void){
   m.humidity[1] = generateMeasurementValue(HUMIDITY, dht22_sensor_2.readHumidity());
   m.humidity[2] = generateMeasurementValue(HUMIDITY, dht22_sensor_3.readHumidity());
   m.humidity[3] = generateMeasurementValue(HUMIDITY, dht22_sensor_4.readHumidity()); 
-
+  
   setSensorPower(OFF);
 
+  for (uint8_t i = 0; i < 4; i++){    //Invalid measurements values are normalised into 200% RH and -200 ºC.
+    if (m.humidity[i] == 255){
+      m.humidity[i] = 255;
+      m.temperature[i] = -2000;
+    }
+  }
   return(m);
 }
 
@@ -817,6 +817,8 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
       String request = generatePOSTRequest(buf, n); //Generate request with n elements.
       Serial.print("\n[HTTP] POST...:\n");  Serial.print(request);
 
+      // http.addHeader("Content-Type", "application/x-www-form-urlencoded");  //Specify content-type header.
+      // http.addHeader("Accept", "text/html");  //Specify content-type header.
       http.addHeader("Content-Type", "text/plain");  //Specify content-type header.
       int httpCode = http.POST(request);   //Send the request.
       if(httpCode > 0){
@@ -899,9 +901,9 @@ uint32_t getServerTimeUnix(void){ //Obsolete!!
 }
 
 void scheduleConnect(void){
-  LED_Color(COLOR_GREEN);
-  Alarm.delay(750);
-  LED_Color(COLOR_BLACK);
+  // LED_Color(COLOR_CYAN);
+  // Alarm.delay(750);
+  // LED_Color(COLOR_BLACK);
   Serial.print("\n- - - - - - - Scheduled alarm. - - - - - - -\n");
   // if(sendMeasurements(0,0)) return true; else return false;
 }
@@ -1116,8 +1118,8 @@ Config_globals readGlobals(void){
     config_globals.id_sensor_c=3;
     config_globals.id_sensor_d=4;
     config_globals.sample_time=3600;
-    config_globals.connection_time[0]=3;  //6:30 a.m. UTC
-    config_globals.connection_time[1]=30;
+    config_globals.connection_time[0]=13;  //6:30 a.m. UTC
+    config_globals.connection_time[1]=0;
 
     saveGlobals();
   }

@@ -117,7 +117,8 @@ typedef struct{
 #define STATE_FORCE_MEASUREMENT 7       //State to take measurement, force save to flash, and transmit to server.
 
 /*---------------------------------------------------------*/
-#define SEND_MEASUREMENTS_URL   "/sendmeasurements"
+// #define SEND_MEASUREMENTS_URL   "/sendmeasurements"
+#define SEND_MEASUREMENTS_URL   "/sensores/test.php"
 #define GET_TIME_URL            "/gettime"
 #define MAX_PACKET_PER_REQUEST       12      //Maximum number of packets to send per request.
 
