@@ -7,7 +7,6 @@
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
 #include <TimeLib.h>
-#include <TimeAlarms.h>   // https://forum.arduino.cc/index.php?topic=37693.0
 
 #include <datalogger_config.h>  //Configuration parameters.
 
@@ -33,8 +32,11 @@ typedef struct{
   char server_ip[64];
   uint16_t server_port;
   char local_ip[16];      //192.168.255.255 ->15 + NULL
-  char wifi_security_type[10];   //// enum wifi_security_type{WEP, WPA, WPA2, WPA2E};
+  char send_measurements_path[64];
+  char get_time_path[64];
 
+  char wifi_security_type[10];   //// enum wifi_security_type{WEP, WPA, WPA2, WPA2E};
+  
   uint8_t   server_connection_retry;     //amount of retrials to connect in case of failure. (def:1).
   uint32_t  network_connection_timeout;   //milliseconds to try connecting  (def:5000).
   uint32_t  response_timeout;     //milliseconds to await response  (def:2000).
@@ -345,6 +347,9 @@ void loop() {
     
     if(wifi_softap_get_station_num() > 0){  //If there is any station connected to the local AP...
       idle_time_start = millis(); //Set new reference to current time.
+      if (idle_time_start >= 1800000){    //If more than 30 min. elapsed...
+        statem.setState(STATE_DEEP_SLEEP);  //Forces deep sleep.
+      }
     }
     else{
       if((millis() - idle_time_start) >= CONFIG_MODE_IDLE_TIMEOUT){
@@ -788,7 +793,7 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
     uint8_t buf[MAX_PACKET_PER_REQUEST*sizeof(Measurement)]; //288 bytes.
     //Generate full URL.
     String url = "http://"+(String)config_globals.server_ip+":"+(String)config_globals.server_port;
-    url+=SEND_MEASUREMENTS_URL;
+    url+=SEND_MEASUREMENTS_PATH;
     Serial.print("\n url: ");   Serial.println(url);
 
     Serial.printf("\n HTTP client started: %d",  http.begin(url));   //Specify request destination
@@ -817,11 +822,11 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
       String request = generatePOSTRequest(buf, n); //Generate request with n elements.
       Serial.print("\n[HTTP] POST...:\n");  Serial.print(request);
 
-      // http.addHeader("Content-Type", "application/x-www-form-urlencoded");  //Specify content-type header.
-      // http.addHeader("Accept", "text/html");  //Specify content-type header.
-      http.addHeader("Content-Type", "text/plain");  //Specify content-type header.
+      http.addHeader("Content-Type", "application/x-www-form-urlencoded");  //Specify content-type header.
+      http.addHeader("Accept", "text/html");  //Specify content-type header.
+      // http.addHeader("Content-Type", "text/plain");  //Specify content-type header.
       int httpCode = http.POST(request);   //Send the request.
-      if(httpCode > 0){
+      if(httpCode == 200){
         String payload = http.getString();  
         Serial.print("\n Response:"); Serial.println(payload);  
         http.end(); //for test.
@@ -856,17 +861,21 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
     
     //Get current time.
     url = "http://"+(String)config_globals.server_ip+":"+(String)config_globals.server_port;
-    url+=GET_TIME_URL;
+    url+=GET_TIME_PATH;
     Serial.print("\n url: ");   Serial.println(url);
     http.begin(url);
-    if(http.GET() > 0){   //If return code is valid
+    if(http.GET() == 200){   //If return code is valid
       String payload = http.getString();
       payload = payload.substring(payload.indexOf("\n")+1); //Get only the numeric value.
-      rtcmem.var.current_time = payload.toInt();
-      rtcmem.var.last_sync_time = rtcmem.var.current_time;
-      rtcmem.rwVariables();
-      
-      Serial.printf("\n UTC time from server: %d\n", rtcmem.rwVariables().last_sync_time);
+
+      if( !payload.isEmpty() ){
+        rtcmem.var.current_time = (uint32_t)payload.toInt();
+        rtcmem.var.last_sync_time = rtcmem.var.current_time;
+        rtcmem.rwVariables();
+        Serial.printf("\n UTC time from server: %d\n", rtcmem.rwVariables().last_sync_time);
+      }
+      else
+        Serial.print("\nInvalid time value.");
     }
     else
       Serial.print("\nUnable to obtain time.");
@@ -1106,6 +1115,9 @@ Config_globals readGlobals(void){
     strcpy(config_globals.server_ip, "192.168.123.123");
     strcpy(config_globals.local_ip,"192.168.123.2");
     strcpy(config_globals.wifi_security_type,"WPA2");
+    strcpy(config_globals.send_measurements_path, SEND_MEASUREMENTS_PATH);
+    strcpy(config_globals.get_time_path, GET_TIME_PATH);
+
 
     config_globals.server_port=8080;
     config_globals.server_connection_retry=2;
@@ -1180,9 +1192,6 @@ unsigned char runWebServer(void){
   server.on("/get_parameters",handleGetParameters);
   server.on("/device_config",handleChangeConfig);
 
-
-  
-
   return(1);
 }
 
@@ -1209,23 +1218,21 @@ void handleChangeNetworkConfig(void){
     Serial.print("/change_network_config");
     String new_ssid, new_password;
     
-    if (server.hasArg("new_ssid") && server.hasArg("new_password"))
-    {
+    if (server.hasArg("new_ssid") && server.hasArg("new_password")){
         // new_ssid = server.arg("new_ssid");
         // new_password = server.arg("new_password");
-        server.arg(0).toCharArray(config_globals.network_ap_ssid, sizeof(config_globals.network_ap_ssid));
-        server.arg(1).toCharArray(config_globals.network_ap_pass, sizeof(config_globals.network_ap_pass));
+        server.arg("new_ssid").toCharArray(config_globals.network_ap_ssid, sizeof(config_globals.network_ap_ssid));
+        server.arg("new_password").toCharArray(config_globals.network_ap_pass, sizeof(config_globals.network_ap_pass));
         //Change parameters in Flash config file.
         saveGlobals();
 
         // server.send(200, "text/plain", "Network credentials modified correctly.");
-        server.send(200);   //Return code 200 (OK).
+        server.send(200);   //Returns that everything is updated OK.
 
         // Serial.printf("\nNetwork credentials modified:\nSSID:%s\nPass:%s",new_ssid,new_password);
     }
-    else
-    {
-        server.send(200, "text/html", "ERROR: Wrong parameters.");
+    else{
+        server.send(200, "text/html", "<h5>ERROR: Wrong parameters.</h5>");
     }
 }
 
@@ -1233,24 +1240,22 @@ void handleChangeServerConfig(void){
   Serial.print("/change_server_config");
   String new_ip, new_port;
   
-  if (server.hasArg("ip") && server.hasArg("port"))
-  {
+  if (server.hasArg("ip") && server.hasArg("port")){
       new_ip = server.arg("new_ip");
       new_port = server.arg("new_port");
       /* Validate ip and port number */
-      server.arg(0).toCharArray(config_globals.server_ip, sizeof(config_globals.server_ip));
-      config_globals.server_port=server.arg(1).toInt();
-
-      saveGlobals();
+      server.arg("ip").toCharArray(config_globals.server_ip, sizeof(config_globals.server_ip));
+      config_globals.server_port=server.arg("port").toInt();
+      server.arg("send_measurements_path").toCharArray(config_globals.send_measurements_path, sizeof(config_globals.send_measurements_path));
+      server.arg("get_time_path").toCharArray(config_globals.get_time_path, sizeof(config_globals.get_time_path));
 
       //Change parameters in Flash config file.
-      // server.send(200, "text/plain", "Server parameters modified correctly.");
-      server.send(200);   //Return code 200 (OK).
-      // Serial.printf("\nServer parameters modified:\nIP:%s\nPort:%s",new_ip,new_port);
+      saveGlobals();
+
+      server.send(200);   //Returns that everything is updated OK.
   }
-  else
-  {
-      server.send(200, "text/html", "ERROR: Wrong parameters.");
+  else{
+      server.send(200, "text/html", "<h5>ERROR: Wrong parameters.</h5>");
   } 
 }
 
@@ -1309,76 +1314,66 @@ unsigned char handleTurnOffDevice(void){
 bool handleChangeConfig(void){
   /*
     Open configuration file and overwrite the values received. 
-    If any entry is invalid or blank/null, don\\\"t overwrite it.
+    If any entry is invalid or blank/null, don't overwrite it.
     Also data should be validated from both browser (Javascript code) 
     and this function too, in order to avoid errors.
   */
   //Number of args.
   Serial.print("\n\n (/device_config) - args:\n");
-  for (uint16_t i = 0; i < server.args(); i++)
-  {
-      Serial.printf("\n arg %d->", i);
-      Serial.println(String(server.argName(i)));
-      Serial.println(String(server.arg(i)));
+  if (server.args() > 0){
+    for (uint16_t i = 0; i < server.args(); i++){
+        Serial.printf("\n arg %d->", i);
+        Serial.println(String(server.argName(i)));
+        Serial.println(String(server.arg(i)));
+    }
+
+    // server.arg("network_ap_ssid").toCharArray(config_globals.network_ap_ssid, sizeof(config_globals.network_ap_ssid));
+    // server.arg("network_ap_pass").toCharArray(config_globals.network_ap_pass, sizeof(config_globals.network_ap_pass));
+    // server.arg("server_ip").toCharArray(config_globals.server_ip, sizeof(config_globals.server_ip));
+    // // server.arg("local_ip").toCharArray(config_globals.local_ip, sizeof(config_globals.local_ip));
+    // server.arg("wifi_security_type").toCharArray(config_globals.wifi_security_type, sizeof(config_globals.wifi_security_type));
+    // config_globals.server_port=server.arg("server_port").toInt();
+    // server.arg("send_measurements_path").toCharArray(config_globals.send_measurements_path, sizeof(config_globals.send_measurements_path));
+    // server.arg("get_time_path").toCharArray(config_globals.get_time_path, sizeof(config_globals.get_time_path));
+
+  
+    config_globals.network_connection_timeout=server.arg("network_connection_timeout").toInt();
+    config_globals.server_connection_retry=server.arg("server_connection_retry").toInt();
+    // config_globals.server_connection_timeout=server.arg("server_connection_timeout").toInt();
+    // config_globals.response_timeout=server.arg("response_timeout").toInt();
+    config_globals.id_transceiver=server.arg("id_transceiver").toInt();
+    config_globals.id_sensor_a=server.arg("id_sensor_a").toInt();
+    config_globals.id_sensor_b=server.arg("id_sensor_b").toInt();
+    config_globals.id_sensor_c=server.arg("id_sensor_c").toInt();
+    config_globals.id_sensor_d=server.arg("id_sensor_d").toInt();
+    config_globals.sample_time=server.arg("sample_time").toInt();
+    config_globals.connection_time[0]=server.arg("connection_time").toInt();  //6:30 a.m. UTC
+    config_globals.connection_time[1]=0;  //00 minutes default value.
+
+    Serial.print("\n Configuration parameters modified:\n");
+    Serial.print("\n network_ap_ssid:");
+    Serial.println(config_globals.network_ap_ssid);
+    Serial.print("\n network_ap_pass:");
+    Serial.println(config_globals.network_ap_pass);
+    Serial.print("\n server_ip:");
+    Serial.println(config_globals.server_ip);
+
+    Serial.printf("\n server_port: %d",config_globals.server_port);
+    Serial.printf("\n network_connection_timeout: %d", config_globals.network_connection_timeout);
+    Serial.printf("\n server_connection_retry: %d", config_globals.server_connection_retry);
+    Serial.printf("\n id_transceiver: %d", config_globals.id_transceiver);
+    Serial.printf("\n id_sensor_a: %d", config_globals.id_sensor_a);
+    Serial.printf("\n id_sensor_b: %d", config_globals.id_sensor_b);
+    Serial.printf("\n id_sensor_c: %d", config_globals.id_sensor_c);
+    Serial.printf("\n id_sensor_d: %d", config_globals.id_sensor_d);
+    Serial.printf("\n sample_time: %d", config_globals.sample_time);
+
+    saveGlobals();
+    server.send(200);   //Returns that everything is updated OK.
+    return true;
   }
-
-  // server.arg(0).toCharArray(config_globals.network_ap_ssid, sizeof(config_globals.network_ap_ssid));
-  // server.arg(1).toCharArray(config_globals.network_ap_pass, sizeof(config_globals.network_ap_pass));
-  // server.arg(2).toCharArray(config_globals.server_ip, sizeof(config_globals.server_ip));
-  // server.arg("local_ip").toCharArray(config_globals.local_ip, sizeof(config_globals.local_ip));
-  // server.arg("wifi_security_type").toCharArray(config_globals.wifi_security_type, sizeof(config_globals.wifi_security_type));
-
-  // config_globals.server_port=server.arg(3).toInt();
-  config_globals.network_connection_timeout=server.arg(4).toInt();
-  config_globals.server_connection_retry=server.arg(5).toInt();
-  // config_globals.server_connection_timeout=server.arg("server_connection_timeout").toInt();
-  // config_globals.response_timeout=server.arg("response_timeout").toInt();
-  config_globals.id_transceiver=server.arg(6).toInt();
-  config_globals.id_sensor_a=server.arg(7).toInt();
-  config_globals.id_sensor_b=server.arg(8).toInt();
-  config_globals.id_sensor_c=server.arg(9).toInt();
-  config_globals.id_sensor_d=server.arg(10).toInt();
-  config_globals.sample_time=server.arg(11).toInt();
-  // config_globals.connection_time[0]=server.arg("").toInt();  //6:30 a.m. UTC
-  // config_globals.connection_time[0]=server.arg("").toInt();
-
-  Serial.print("\n Configuration parameters modified:\n");
-  Serial.print("\n network_ap_ssid:");
-  Serial.println(config_globals.network_ap_ssid);
-  Serial.print("\n network_ap_pass:");
-  Serial.println(config_globals.network_ap_pass);
-  Serial.print("\n server_ip:");
-  Serial.println(config_globals.server_ip);
-
-  Serial.printf("\n server_port: %d",config_globals.server_port);
-  Serial.printf("\n server_connection_retry: %d", config_globals.server_connection_retry);
-  Serial.printf("\n network_connection_timeout: %d", config_globals.network_connection_timeout);
-  Serial.printf("\n id_transceiver: %d", config_globals.id_transceiver);
-  Serial.printf("\n id_sensor_a: %d", config_globals.id_sensor_a);
-  Serial.printf("\n id_sensor_b: %d", config_globals.id_sensor_b);
-  Serial.printf("\n id_sensor_c: %d", config_globals.id_sensor_c);
-  Serial.printf("\n id_sensor_d: %d", config_globals.id_sensor_d);
-  Serial.printf("\n sample_time: %d", config_globals.sample_time);
-
-  /* void* p = &config_globals;
-  File file = SPIFFS.open(CONFIG_FILE_NAME, "w");
-  if (file) {       //If file opened correctly...
-
-      Serial.printf("\nglobals saved:");
-      for (uint16 i = 0; i < sizeof(config_globals); i++)
-      {
-        Serial.printf("%X ", ((const char*)p)[i]);
-      }
-
-      file.write((const char*)(p), sizeof(Variables)); //Overwrites previous data.
-      file.close();
-      return true;
-  }
-
-  return false; */
-  saveGlobals();
-  server.send(200);   //Returns that everything is updated OK.
-  return true;
+  else 
+    return false;
 }
 
 unsigned char handleGetParameters(void){
@@ -1388,6 +1383,8 @@ unsigned char handleGetParameters(void){
   parameters += ",\\\"network_ap_pass\\\":\\\""+String(config_globals.network_ap_pass)+"\\\"";
   parameters += ",\\\"server_ip\\\":\\\""+String(config_globals.server_ip)+"\\\"";
   parameters += ",\\\"server_port\\\":"+String(config_globals.server_port);
+  parameters += ",\\\"send_measurements_path\\\":\\\""+String(config_globals.send_measurements_path)+"\\\"";
+  parameters += ",\\\"get_time_path\\\":\\\""+String(config_globals.get_time_path)+"\\\"";
   parameters += ",\\\"network_connection_timeout\\\":"+String(config_globals.network_connection_timeout);
   parameters += ",\\\"server_connection_retry\\\":"+String(config_globals.server_connection_retry);
   parameters += ",\\\"id_transceiver\\\":"+String(config_globals.id_transceiver);
@@ -1396,11 +1393,14 @@ unsigned char handleGetParameters(void){
   parameters += ",\\\"id_sensor_c\\\":"+String(config_globals.id_sensor_c);
   parameters += ",\\\"id_sensor_d\\\":"+String(config_globals.id_sensor_d);
   parameters += ",\\\"sample_time\\\":"+String(config_globals.sample_time);
+  parameters += ",\\\"connection_time\\\":"+String(config_globals.connection_time[0]);
 
   parameters += "}\"";
   Serial.print("\n\nparameters sent to web interface:\n");
   Serial.println(parameters);
   server.send(200, "text/plain", parameters);
+
+  return true;
 }
 
 

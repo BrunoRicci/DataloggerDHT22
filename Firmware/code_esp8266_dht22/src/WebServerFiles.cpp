@@ -81,9 +81,17 @@ const char index_html[] PROGMEM = R"rawliteral(
         <br>
         <br>
         <form method="POST" action="change_server_config" margin="10px">
+            <label>IP Server</label>
             <input id="input_server_ip" type="text" placeholder="IPv4" name="ip" width="50%" border-radius="2px">
             <br>
+            <label>Puerto server</label>
             <input id="input_server_port" type="text" placeholder="Puerto" name="port" width="50%">
+            <br>
+            <label>Ruta mediciones</label>
+            <input id="input_send_measurements_path" type="text" placeholder="Ruta datos" name="send_measurements_path" width="50%">
+            <br>
+            <label>Ruta sincronizaci&oacute;n<nav></nav></label>
+            <input id="input_get_time_path" type="text" placeholder="Ruta sync." name="get_time_path" width="50%">
             <br>
             <input class="button" type="submit" value="Modificar">
             
@@ -143,6 +151,11 @@ const char index_html[] PROGMEM = R"rawliteral(
             <label>Tiempo muestreo (seg)</label>
             <input type="text" id="input_sample_time">
         </div>
+        <br>
+        <div class="device_config">
+            <label>Hora conexi&oacute;n</label>
+            <input type="text" id="input_connection_time">
+        </div>
 
         <br>
         <button class="button" onclick="deviceConfig()">Cambiar par&aacute;metros</button>
@@ -156,11 +169,7 @@ const char index_html[] PROGMEM = R"rawliteral(
     var parameters = {};    //Global
 
     window.addEventListener('load', function(){
-        // var transceiver_id = document.querySelector("#input_transceiver_id");
-
-        // console.log("tid value:",transceiver_id.value);
-        // console.log("tid length:",transceiver_id.value.length);
-
+        
         //Request parameters saved into device:
         var xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
@@ -169,25 +178,14 @@ const char index_html[] PROGMEM = R"rawliteral(
                 parameters = JSON.parse(JSON.parse(this.responseText));
                 console.log("parameters:", parameters);
                 
-                console.log(parameters["network_ap_ssid"]);
-                console.log(parameters["network_ap_pass"]);
-                console.log(parameters["server_ip"]);
-                console.log(parameters["server_port"]);
-                console.log(parameters["network_connection_timeout"]);
-                console.log(parameters["server_connection_retry"]);
-                console.log(parameters["id_transceiver"]);
-                console.log(parameters["id_sensor_a"]);
-                console.log(parameters["id_sensor_b"]);
-                console.log(parameters["id_sensor_c"]);
-                console.log(parameters["id_sensor_d"]);
-                console.log(parameters["input_sample_time"]);
-
-                
+                console.log(parameters);
 
                 document.querySelector("#input_network_ap_ssid").value = parameters["network_ap_ssid"];
                 document.querySelector("#input_network_ap_pass").value = parameters["network_ap_pass"];
                 document.querySelector("#input_server_ip").value = parameters["server_ip"];
                 document.querySelector("#input_server_port").value = parameters["server_port"];
+                document.querySelector("#input_send_measurements_path").value = parameters["send_measurements_path"];
+                document.querySelector("#input_get_time_path").value = parameters["get_time_path"];
                 document.querySelector("#input_network_connection_timeout").value = parameters["network_connection_timeout"];
                 document.querySelector("#input_server_connection_retry").value = parameters["server_connection_retry"];
                 document.querySelector("#input_id_transceiver").value = parameters["id_transceiver"];
@@ -196,6 +194,7 @@ const char index_html[] PROGMEM = R"rawliteral(
                 document.querySelector("#input_id_sensor_c").value = parameters["id_sensor_c"];
                 document.querySelector("#input_id_sensor_d").value = parameters["id_sensor_d"];
                 document.querySelector("#input_sample_time").value = parameters["sample_time"];
+                document.querySelector("#input_connection_time").value = parameters["connection_time"];
                
                 // console.log("JSON parsed:",JSON.parse(this.responseText));
                
@@ -271,6 +270,8 @@ const char index_html[] PROGMEM = R"rawliteral(
         parameters["network_ap_pass"] = document.querySelector("#input_network_ap_pass").value
         parameters["server_ip"] = document.querySelector("#input_server_ip").value
         parameters["server_port"] = document.querySelector("#input_server_port").value
+        parameters["send_measurements_path"] = document.querySelector("#input_send_measurements_path").value;
+        parameters["get_time_path"] = document.querySelector("#input_get_time_path").value;
         parameters["network_connection_timeout"] = document.querySelector("#input_network_connection_timeout").value
         parameters["server_connection_retry"] = document.querySelector("#input_server_connection_retry").value
         parameters["id_transceiver"] = document.querySelector("#input_id_transceiver").value
@@ -279,24 +280,28 @@ const char index_html[] PROGMEM = R"rawliteral(
         parameters["id_sensor_c"] = document.querySelector("#input_id_sensor_c").value
         parameters["id_sensor_d"] = document.querySelector("#input_id_sensor_d").value
         parameters["sample_time"] = document.querySelector("#input_sample_time").value
+        parameters["connection_time"] = document.querySelector("#input_connection_time").value
 
+        
         var xhttp = new XMLHttpRequest();
         xhttp.open("POST", "device_config", true);     //Request to "/get_parameters" URL.
         xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
         xhttp.send(
-            `network_ap_ssid=${parameters["network_ap_ssid"]}&
-            network_ap_pass=${parameters["network_ap_pass"]}&
-            server_ip=${parameters["server_ip"]}&
-            server_port=${parameters["server_port"]}&
-            network_connection_timeout=${parameters["network_connection_timeout"]}&
-            server_connection_retry=${parameters["server_connection_retry"]}&
-            id_transceiver=${parameters["id_transceiver"]}&
-            id_sensor_a=${parameters["id_sensor_a"]}&
-            id_sensor_b=${parameters["id_sensor_b"]}&
-            id_sensor_c=${parameters["id_sensor_c"]}&
-            id_sensor_d=${parameters["id_sensor_d"]}&
-            sample_time=${parameters["sample_time"]}
-            `
+            `network_ap_ssid=${parameters["network_ap_ssid"]}&`+
+            `network_ap_pass=${parameters["network_ap_pass"]}&`+
+            `server_ip=${parameters["server_ip"]}&`+
+            `server_port=${parameters["server_port"]}&`+
+            `send_measurements_path=${parameters["send_measurements_path"]}&`+
+            `get_time_path=${parameters["get_time_path"]}&`+
+            `connection_time=${parameters["connection_time"]}&`+
+            `network_connection_timeout=${parameters["network_connection_timeout"]}&`+
+            `server_connection_retry=${parameters["server_connection_retry"]}&`+
+            `id_transceiver=${parameters["id_transceiver"]}&`+
+            `id_sensor_a=${parameters["id_sensor_a"]}&`+
+            `id_sensor_b=${parameters["id_sensor_b"]}&`+
+            `id_sensor_c=${parameters["id_sensor_c"]}&`+
+            `id_sensor_d=${parameters["id_sensor_d"]}&`+
+            `sample_time=${parameters["sample_time"]}`
         );   //Send request
     }       
 </script>

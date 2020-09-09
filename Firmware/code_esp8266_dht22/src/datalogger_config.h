@@ -36,7 +36,7 @@
 #define PWR_SENSORS_PIN_P       13      //GPIO13 to control sensors power supply (high side).
 #define PWR_SENSORS_PIN_N       15      //GPIO15 to control sensors power supply (low side).
 #define REED_SWITCH_PIN         14      //GPIO14 to sense switch state.
-#define BATTERY_SENSE_PIN       A0      //A0 oin as analog
+#define BATTERY_SENSE_PIN       A0      //A0 pin as analog.
 
 #define LED_R_PIN       4
 #define LED_G_PIN       0
@@ -117,14 +117,16 @@ typedef struct{
 #define STATE_FORCE_MEASUREMENT 7       //State to take measurement, force save to flash, and transmit to server.
 
 /*---------------------------------------------------------*/
-// #define SEND_MEASUREMENTS_URL   "/sendmeasurements"
-#define SEND_MEASUREMENTS_URL   "/sensores/test.php"
-#define GET_TIME_URL            "/gettime"
+// #define SEND_MEASUREMENTS_PATH   "/sendmeasurements"
+#define SEND_MEASUREMENTS_PATH   "/sensores/test.php"
+#define GET_TIME_PATH            "/sensores/gettime.php"
 #define MAX_PACKET_PER_REQUEST       12      //Maximum number of packets to send per request.
 
 #define MSG_SYNC_TIME  "Time updated."
 #define COMMAND_FORCE_MEASUREMENT       "FORCE_MEASUREMENT"
 #define COMMAND_CONFIG_MODE             "CONFIG_MODE"
 
+#define DEVICE_CONFIG_SSID      "Datalogger"
+#define DEVICE_CONFIG_PASS      "123456789!"
 
 #endif  //__DATALOGGER_CONFIG_HPP_INCLUDED__

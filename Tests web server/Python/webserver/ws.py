@@ -138,7 +138,7 @@ def test():             #Returns tha same that is sent via GET method.
     print('Received value: {}'.format(value))
     return ('Received value: {valor}'.format(valor=value))
 
-@route('/sendmeasurements', method='POST')
+@route('/sensores/test.php', method='POST')
 def sendMeasurements(): #change method name...
     dict_data = {"id_transceiver": 0,"battery_level":0,"timestamp": [],"id_sensor": [],"temperature":[],"humidity":[], "current_time":0}    
 
@@ -167,7 +167,7 @@ def sendMeasurements(): #change method name...
     print('Received values:'+str(dict_data))
     return 'Values received!' 
 
-@route('/gettime')
+@route('/sensores/gettime.php')
 def get_time():
     currenttime = int(time.time())    #Get current UNIX UTC time in seconds.
     result = "Current UNIX time (UTC):\n{}".format(str(currenttime))
