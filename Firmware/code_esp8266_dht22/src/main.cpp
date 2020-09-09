@@ -1327,15 +1327,15 @@ bool handleChangeConfig(void){
         Serial.println(String(server.arg(i)));
     }
 
-    // server.arg("network_ap_ssid").toCharArray(config_globals.network_ap_ssid, sizeof(config_globals.network_ap_ssid));
-    // server.arg("network_ap_pass").toCharArray(config_globals.network_ap_pass, sizeof(config_globals.network_ap_pass));
-    // server.arg("server_ip").toCharArray(config_globals.server_ip, sizeof(config_globals.server_ip));
-    // // server.arg("local_ip").toCharArray(config_globals.local_ip, sizeof(config_globals.local_ip));
-    // server.arg("wifi_security_type").toCharArray(config_globals.wifi_security_type, sizeof(config_globals.wifi_security_type));
-    // config_globals.server_port=server.arg("server_port").toInt();
-    // server.arg("send_measurements_path").toCharArray(config_globals.send_measurements_path, sizeof(config_globals.send_measurements_path));
-    // server.arg("get_time_path").toCharArray(config_globals.get_time_path, sizeof(config_globals.get_time_path));
-
+    /* server.arg("network_ap_ssid").toCharArray(config_globals.network_ap_ssid, sizeof(config_globals.network_ap_ssid));
+    server.arg("network_ap_pass").toCharArray(config_globals.network_ap_pass, sizeof(config_globals.network_ap_pass));
+    server.arg("server_ip").toCharArray(config_globals.server_ip, sizeof(config_globals.server_ip));
+    // server.arg("local_ip").toCharArray(config_globals.local_ip, sizeof(config_globals.local_ip));
+    server.arg("wifi_security_type").toCharArray(config_globals.wifi_security_type, sizeof(config_globals.wifi_security_type));
+    config_globals.server_port=server.arg("server_port").toInt();
+    server.arg("send_measurements_path").toCharArray(config_globals.send_measurements_path, sizeof(config_globals.send_measurements_path));
+    server.arg("get_time_path").toCharArray(config_globals.get_time_path, sizeof(config_globals.get_time_path));
+    */
   
     config_globals.network_connection_timeout=server.arg("network_connection_timeout").toInt();
     config_globals.server_connection_retry=server.arg("server_connection_retry").toInt();
