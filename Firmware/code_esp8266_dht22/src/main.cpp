@@ -1367,6 +1367,7 @@ bool handleChangeConfig(void){
     Serial.printf("\n id_sensor_c: %d", config_globals.id_sensor_c);
     Serial.printf("\n id_sensor_d: %d", config_globals.id_sensor_d);
     Serial.printf("\n sample_time: %d", config_globals.sample_time);
+    Serial.printf("\n connection_time: %d", config_globals.connection_time[0]);
 
     saveGlobals();
     server.send(200);   //Returns that everything is updated OK.
