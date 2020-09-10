@@ -66,9 +66,11 @@ const char index_html[] PROGMEM = R"rawliteral(
         <br>
         <br>
         <form method="POST" action="change_network_config">
+
+
             <input id="input_network_ap_ssid" type="text" placeholder="SSID" name="new_ssid" width="50%" border-radius="2px">
             <br>
-            <input id="input_network_ap_pass" type="text" placeholder="Password" name="new_password" width="50%">
+            <input id="input_network_ap_pass" type="password" placeholder="Password" name="new_password" width="50%">
             <br>
             <input class="button" type="submit" value="Modificar">
             
