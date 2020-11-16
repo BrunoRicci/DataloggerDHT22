@@ -72,6 +72,7 @@ const char index_html[] PROGMEM = R"rawliteral(
             <br>
             <input id="input_network_ap_pass" type="password" placeholder="Password" name="new_password" width="50%">
             <br>
+            <input id="input_client_static_ip" type="text" placeholder="Static IP" name="client_static_ip" width="50%">
             <input class="button" type="submit" value="Modificar">
             
         </form>
@@ -178,12 +179,13 @@ const char index_html[] PROGMEM = R"rawliteral(
             if (this.readyState == 4 && this.status == 200) {
                 console.log("responseText:",this.responseText);
                 parameters = JSON.parse(JSON.parse(this.responseText));
+
                 console.log("parameters:", parameters);
                 
-                console.log(parameters);
 
                 document.querySelector("#input_network_ap_ssid").value = parameters["network_ap_ssid"];
                 document.querySelector("#input_network_ap_pass").value = parameters["network_ap_pass"];
+                document.querySelector("#input_client_static_ip").value = parameters["client_static_ip"];
                 document.querySelector("#input_server_ip").value = parameters["server_ip"];
                 document.querySelector("#input_server_port").value = parameters["server_port"];
                 document.querySelector("#input_send_measurements_path").value = parameters["send_measurements_path"];
@@ -270,6 +272,7 @@ const char index_html[] PROGMEM = R"rawliteral(
         //Update values to variable.
         parameters["network_ap_ssid"] = document.querySelector("#input_network_ap_ssid").value
         parameters["network_ap_pass"] = document.querySelector("#input_network_ap_pass").value
+        parameters["client_static_ip"] = document.querySelector("#input_client_static_ip").value
         parameters["server_ip"] = document.querySelector("#input_server_ip").value
         parameters["server_port"] = document.querySelector("#input_server_port").value
         parameters["send_measurements_path"] = document.querySelector("#input_send_measurements_path").value;
@@ -291,6 +294,7 @@ const char index_html[] PROGMEM = R"rawliteral(
         xhttp.send(
             `network_ap_ssid=${parameters["network_ap_ssid"]}&`+
             `network_ap_pass=${parameters["network_ap_pass"]}&`+
+            `client_static_ip=${parameters["client_static_ip"]}&`+
             `server_ip=${parameters["server_ip"]}&`+
             `server_port=${parameters["server_port"]}&`+
             `send_measurements_path=${parameters["send_measurements_path"]}&`+

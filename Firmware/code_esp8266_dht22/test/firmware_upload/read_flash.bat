@@ -1,0 +1,2 @@
+cd C:\Users\BRUNO - PC\AppData\Local\Programs\Python\Python37\Scripts
+esptool.py -b1000000 read_flash 0 0x400000 "C:\Users\BRUNO - PC\REPOS_GIT\DataloggerDHT22\Firmware\code_esp8266_dht22\test\flash_d1.bin"

@@ -37,6 +37,7 @@ typedef struct{
 
   char wifi_security_type[10];   //// enum wifi_security_type{WEP, WPA, WPA2, WPA2E};
   
+  char client_static_ip[4];       //255.255.255.255 
   uint8_t   server_connection_retry;     //amount of retrials to connect in case of failure. (def:1).
   uint32_t  network_connection_timeout;   //milliseconds to try connecting  (def:5000).
   uint32_t  response_timeout;     //milliseconds to await response  (def:2000).
@@ -772,10 +773,32 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
   // bool network_connection_timeout=false, request_timeout=false;
 
   wifiTurnOn(); //Turn on wifi.
+
+
   Serial.setDebugOutput(true);  //DEBUG
+  if (config_globals.client_static_ip[0] != 0){    //if valid IP
+
+    WiFi.config(IPAddress(
+      config_globals.client_static_ip[0],
+      config_globals.client_static_ip[1],
+      config_globals.client_static_ip[2],
+      config_globals.client_static_ip[3]
+      ),
+      IPAddress(
+        config_globals.client_static_ip[0],
+        config_globals.client_static_ip[1],
+        config_globals.client_static_ip[2],
+        250
+      ),
+      IPAddress(255,255,0,0),
+      IPAddress(10,1,1,1),
+      IPAddress(10,1,1,11)
+    );
   // WiFi.config(IPAddress(192,168,123,106), IPAddress(192,168,123,1),IPAddress(255,255,255,0));    //Fixed IP configuration.  
-  //   Serial.print("Local IP: ");
-  // Serial.println(WiFi.localIP());
+    Serial.print("\nStatic IP fixed: ");
+    Serial.println(WiFi.localIP());
+  }
+
   WiFi.begin(config_globals.network_ap_ssid, config_globals.network_ap_pass);
   LED_Color(COLOR_BLUE);
       
@@ -787,12 +810,15 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
   }
   LED_Color(COLOR_BLACK);
   Serial.println(WiFi.localIP());
+  Serial.println(WiFi.gatewayIP());
+  Serial.println(WiFi.subnetMask());
+  Serial.println(WiFi.dnsIP());
 
   if(WiFi.status() == WL_CONNECTED){
     
     uint8_t buf[MAX_PACKET_PER_REQUEST*sizeof(Measurement)]; //288 bytes.
     //Generate full URL.
-    String url = "http://"+(String)config_globals.server_ip+":"+(String)config_globals.server_port;
+    String url = "http://www."+(String)config_globals.server_ip+":"+(String)config_globals.server_port;
     url+=SEND_MEASUREMENTS_PATH;
     Serial.print("\n url: ");   Serial.println(url);
 
@@ -824,7 +850,6 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
 
       http.addHeader("Content-Type", "application/x-www-form-urlencoded");  //Specify content-type header.
       http.addHeader("Accept", "text/html");  //Specify content-type header.
-      // http.addHeader("Content-Type", "text/plain");  //Specify content-type header.
       int httpCode = http.POST(request);   //Send the request.
       if(httpCode == 200){
         String payload = http.getString();  
@@ -1118,7 +1143,10 @@ Config_globals readGlobals(void){
     strcpy(config_globals.send_measurements_path, SEND_MEASUREMENTS_PATH);
     strcpy(config_globals.get_time_path, GET_TIME_PATH);
 
-
+    config_globals.client_static_ip[0]=0; //Def: 0.0.0.0
+    config_globals.client_static_ip[0]=0;
+    config_globals.client_static_ip[0]=0;
+    config_globals.client_static_ip[0]=0;
     config_globals.server_port=8080;
     config_globals.server_connection_retry=2;
     config_globals.network_connection_timeout=10000;
@@ -1130,7 +1158,7 @@ Config_globals readGlobals(void){
     config_globals.id_sensor_c=3;
     config_globals.id_sensor_d=4;
     config_globals.sample_time=3600;
-    config_globals.connection_time[0]=13;  //6:30 a.m. UTC
+    config_globals.connection_time[0]=13;  //13 a.m. UTC
     config_globals.connection_time[1]=0;
 
     saveGlobals();
@@ -1216,6 +1244,8 @@ void handleHome(void){
 
 void handleChangeNetworkConfig(void){
     Serial.print("/change_network_config");
+    String client_local_ip;
+    uint8_t index=0, octet;
     String new_ssid, new_password;
     
     if (server.hasArg("new_ssid") && server.hasArg("new_password")){
@@ -1223,6 +1253,41 @@ void handleChangeNetworkConfig(void){
         // new_password = server.arg("new_password");
         server.arg("new_ssid").toCharArray(config_globals.network_ap_ssid, sizeof(config_globals.network_ap_ssid));
         server.arg("new_password").toCharArray(config_globals.network_ap_pass, sizeof(config_globals.network_ap_pass));
+        client_local_ip = server.arg("client_static_ip");
+
+        //If ip is not empty and has 4 periods...
+        if(client_local_ip.length() && std::count(client_local_ip.begin(), client_local_ip.end(), '.') == 3  ){
+          
+          
+            octet = client_local_ip.substring(index,client_local_ip.indexOf(".",index)).toInt();
+            index = client_local_ip.indexOf(".",index)+1;
+            config_globals.client_static_ip[0] = octet;
+
+            octet = client_local_ip.substring(index,client_local_ip.indexOf(".",index)).toInt();
+            index = client_local_ip.indexOf(".",index)+1;
+            config_globals.client_static_ip[1] = octet;
+
+            octet = client_local_ip.substring(index,client_local_ip.indexOf(".",index)).toInt();
+            index = client_local_ip.indexOf(".",index)+1;
+            config_globals.client_static_ip[2] = octet;
+
+            octet = client_local_ip.substring(index).toInt();
+            config_globals.client_static_ip[3] = octet;
+        }
+
+        Serial.printf("\nCLIENT STATIC IP:  %d.%d.%d.%d",  config_globals.client_static_ip[0],
+                                                          config_globals.client_static_ip[1],
+                                                          config_globals.client_static_ip[2],
+                                                          config_globals.client_static_ip[3]);
+
+        String cl_ip =  String(config_globals.client_static_ip[0],DEC)+"."+
+                  String(config_globals.client_static_ip[1],DEC)+"."+
+                  String(config_globals.client_static_ip[2],DEC)+"."+
+                  String(config_globals.client_static_ip[3],DEC);
+        Serial.print("\nConfig: Static IP:");
+        Serial.println(cl_ip);
+
+
         //Change parameters in Flash config file.
         saveGlobals();
 
@@ -1350,6 +1415,8 @@ bool handleChangeConfig(void){
     config_globals.connection_time[0]=server.arg("connection_time").toInt();  //6:30 a.m. UTC
     config_globals.connection_time[1]=0;  //00 minutes default value.
 
+
+//Show modified values
     Serial.print("\n Configuration parameters modified:\n");
     Serial.print("\n network_ap_ssid:");
     Serial.println(config_globals.network_ap_ssid);
@@ -1379,9 +1446,17 @@ bool handleChangeConfig(void){
 
 unsigned char handleGetParameters(void){
   //Send configuration parameters to the client.
+
+  //Generates IP address with each octet.
+  String cl_ip =  String(config_globals.client_static_ip[0],DEC)+"."+
+                  String(config_globals.client_static_ip[1],DEC)+"."+
+                  String(config_globals.client_static_ip[2],DEC)+"."+
+                  String(config_globals.client_static_ip[3],DEC);
+
   String parameters = "\"{";
   parameters += "\\\"network_ap_ssid\\\":\\\""+String(config_globals.network_ap_ssid)+"\\\"";
   parameters += ",\\\"network_ap_pass\\\":\\\""+String(config_globals.network_ap_pass)+"\\\"";
+  parameters += ",\\\"client_static_ip\\\":\\\""+String(cl_ip)+"\\\"";
   parameters += ",\\\"server_ip\\\":\\\""+String(config_globals.server_ip)+"\\\"";
   parameters += ",\\\"server_port\\\":"+String(config_globals.server_port);
   parameters += ",\\\"send_measurements_path\\\":\\\""+String(config_globals.send_measurements_path)+"\\\"";
@@ -1395,8 +1470,13 @@ unsigned char handleGetParameters(void){
   parameters += ",\\\"id_sensor_d\\\":"+String(config_globals.id_sensor_d);
   parameters += ",\\\"sample_time\\\":"+String(config_globals.sample_time);
   parameters += ",\\\"connection_time\\\":"+String(config_globals.connection_time[0]);
+  parameters += ",\\\"archive_saved_pointer\\\":"+String(rtcmem.var.archive_saved_pointer);
+  parameters += ",\\\"archive_sent_pointer\\\":"+String(rtcmem.var.archive_sent_pointer);
 
   parameters += "}\"";
+
+  Serial.print("Static IP:");
+  Serial.println(cl_ip);
   Serial.print("\n\nparameters sent to web interface:\n");
   Serial.println(parameters);
   server.send(200, "text/plain", parameters);

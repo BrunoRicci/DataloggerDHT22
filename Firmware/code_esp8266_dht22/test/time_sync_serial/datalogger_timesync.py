@@ -46,7 +46,7 @@ time.sleep(.5)
 print('data:' + str(data))
 ser.write(bytes(data))      #Sends current timestamp.
 
-time.sleep(2)
+time.sleep(20)
 
 read_data = str(ser.read_all())
 # read_data.rfind()
