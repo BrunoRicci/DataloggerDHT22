@@ -1,4 +1,4 @@
 *.gcode linguist-detectable=false
 *.js linguist-detectable=true
 *.html linguist-detectable=true
-"Tests web server/Python/webserver/bottle.py" linguist-detectable=false
+*/bottle.py linguist-detectable=false

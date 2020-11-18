@@ -142,7 +142,7 @@ r = requests.request('post','http://192.168.0.170:8080/get_parameters', headers=
 device_id = str(json.loads(r)['id_transceiver'])
 print('device id:'+device_id)
 
-device_id='2'   #FORCE DEVICE ID
+device_id='6'   #FORCE DEVICE ID
 device_data = devices_data[device_id]
 x = device_data
 
