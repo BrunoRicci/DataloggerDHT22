@@ -27,6 +27,8 @@ DHT dht22_sensor_4(DHT_SENSOR_4_PIN, DHTTYPE);    //Creates DHT22 sensor "sensor
 
 
 typedef struct{
+  uint16_t id_transceiver;  //Placed first to avoid value corruption when struct is modified.
+
   char network_ap_ssid[31];
   char network_ap_pass[31];   
   char server_ip[64];
@@ -38,6 +40,11 @@ typedef struct{
   char wifi_security_type[10];   //// enum wifi_security_type{WEP, WPA, WPA2, WPA2E};
   
   char client_static_ip[4];       //255.255.255.255 
+  char client_gateway_ip[4];
+  char client_subnet_mask[4];
+  char client_dns1_ip[4];
+  char client_dns2_ip[4];
+
   uint8_t   server_connection_retry;     //amount of retrials to connect in case of failure. (def:1).
   uint32_t  network_connection_timeout;   //milliseconds to try connecting  (def:5000).
   uint32_t  response_timeout;     //milliseconds to await response  (def:2000).
@@ -48,8 +55,7 @@ typedef struct{
   uint16_t id_sensor_b;
   uint16_t id_sensor_c;
   uint16_t id_sensor_d;
-  uint16_t id_transceiver;    
-
+      
   uint16_t  sample_time;    //lapse between measurements (in seconds)
   uint8_t   connection_time[2]; //[hours][minutes]
 
@@ -305,7 +311,7 @@ void loop() {
       //Send pending measurements and increments the pointer by the amount of sent packets.
       rtcmem.var.archive_saved_pointer = archiveGetPointer(); //Make sure that pointer is updated (if value lost due power failure).
       sent_packets = sendMeasurements(rtcmem.rwVariables().archive_sent_pointer, 0);
-      rtcmem.var.archive_sent_pointer += sent_packets;
+      // rtcmem.var.archive_sent_pointer += sent_packets;
       rtcmem.rwVariables();
 
       Serial.printf("\n\n %d packets succesfully sent.", sent_packets);
@@ -776,25 +782,40 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
 
 
   Serial.setDebugOutput(true);  //DEBUG
-  if (config_globals.client_static_ip[0] != 0){    //if valid IP
+  if (config_globals.client_static_ip[0] != 0){    //if valid static IP
 
-    WiFi.config(IPAddress(
+    WiFi.config(IPAddress(    //Local IP
       config_globals.client_static_ip[0],
       config_globals.client_static_ip[1],
       config_globals.client_static_ip[2],
       config_globals.client_static_ip[3]
       ),
-      IPAddress(
-        config_globals.client_static_ip[0],
-        config_globals.client_static_ip[1],
-        config_globals.client_static_ip[2],
-        250
+      IPAddress(              //Gateway
+        config_globals.client_gateway_ip[0],
+        config_globals.client_gateway_ip[1],
+        config_globals.client_gateway_ip[2],
+        config_globals.client_gateway_ip[3]
       ),
-      IPAddress(255,255,0,0),
-      IPAddress(10,1,1,1),
-      IPAddress(10,1,1,11)
+      IPAddress(              //Subnet
+        config_globals.client_subnet_mask[0],
+        config_globals.client_subnet_mask[1],
+        config_globals.client_subnet_mask[2],
+        config_globals.client_subnet_mask[3]
+      ),
+      IPAddress(              //DNS1
+        config_globals.client_dns1_ip[0],
+        config_globals.client_dns1_ip[1],
+        config_globals.client_dns1_ip[2],
+        config_globals.client_dns1_ip[3]
+      ),
+      IPAddress(              //DNS2
+        config_globals.client_dns2_ip[0],
+        config_globals.client_dns2_ip[1],
+        config_globals.client_dns2_ip[2],
+        config_globals.client_dns2_ip[3]
+      )
+      //IPAddress(200,42,4,204)     //DNS2
     );
-  // WiFi.config(IPAddress(192,168,123,106), IPAddress(192,168,123,1),IPAddress(255,255,255,0));    //Fixed IP configuration.  
     Serial.print("\nStatic IP fixed: ");
     Serial.println(WiFi.localIP());
   }
@@ -861,6 +882,7 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
         LED_Color(COLOR_BLACK);
 
         sent_packets_amount += n;   //Increase sent packets counter.
+        rtcmem.var.archive_sent_pointer += n;
 
         i += n;  //"i" is now the last read packet.
         n = MAX_PACKET_PER_REQUEST;
@@ -1244,35 +1266,94 @@ void handleHome(void){
 
 void handleChangeNetworkConfig(void){
     Serial.print("/change_network_config");
-    String client_local_ip;
+    String client_local_ip, client_gateway_ip, client_subnet_mask, client_dns1_ip, client_dns2_ip;
     uint8_t index=0, octet;
     String new_ssid, new_password;
     
-    if (server.hasArg("new_ssid") && server.hasArg("new_password")){
+    if (server.hasArg("network_ap_ssid") && server.hasArg("network_ap_pass")){
         // new_ssid = server.arg("new_ssid");
         // new_password = server.arg("new_password");
-        server.arg("new_ssid").toCharArray(config_globals.network_ap_ssid, sizeof(config_globals.network_ap_ssid));
-        server.arg("new_password").toCharArray(config_globals.network_ap_pass, sizeof(config_globals.network_ap_pass));
+        server.arg("network_ap_ssid").toCharArray(config_globals.network_ap_ssid, sizeof(config_globals.network_ap_ssid));
+        server.arg("network_ap_pass").toCharArray(config_globals.network_ap_pass, sizeof(config_globals.network_ap_pass));
         client_local_ip = server.arg("client_static_ip");
+        client_gateway_ip = server.arg("client_gateway_ip");
+        client_subnet_mask = server.arg("client_subnet_mask");
+        client_dns1_ip = server.arg("client_dns1_ip");
+        client_dns2_ip = server.arg("client_dns2_ip");
 
         //If ip is not empty and has 4 periods...
         if(client_local_ip.length() && std::count(client_local_ip.begin(), client_local_ip.end(), '.') == 3  ){
-          
-          
-            octet = client_local_ip.substring(index,client_local_ip.indexOf(".",index)).toInt();
-            index = client_local_ip.indexOf(".",index)+1;
-            config_globals.client_static_ip[0] = octet;
+          octet = client_local_ip.substring(index,client_local_ip.indexOf(".",index)).toInt();
+          index = client_local_ip.indexOf(".",index)+1;
+          config_globals.client_static_ip[0] = octet;
+          octet = client_local_ip.substring(index,client_local_ip.indexOf(".",index)).toInt();
+          index = client_local_ip.indexOf(".",index)+1;
+          config_globals.client_static_ip[1] = octet;
+          octet = client_local_ip.substring(index,client_local_ip.indexOf(".",index)).toInt();
+          index = client_local_ip.indexOf(".",index)+1;
+          config_globals.client_static_ip[2] = octet;
+          octet = client_local_ip.substring(index).toInt();
+          config_globals.client_static_ip[3] = octet;
+        }
 
-            octet = client_local_ip.substring(index,client_local_ip.indexOf(".",index)).toInt();
-            index = client_local_ip.indexOf(".",index)+1;
-            config_globals.client_static_ip[1] = octet;
+        if(client_gateway_ip.length() && std::count(client_gateway_ip.begin(), client_gateway_ip.end(), '.') == 3  ){
+          index=0;
+          octet = client_gateway_ip.substring(index,client_gateway_ip.indexOf(".",index)).toInt();
+          index = client_gateway_ip.indexOf(".",index)+1;
+          config_globals.client_gateway_ip[0] = octet;
+          octet = client_gateway_ip.substring(index,client_gateway_ip.indexOf(".",index)).toInt();
+          index = client_gateway_ip.indexOf(".",index)+1;
+          config_globals.client_gateway_ip[1] = octet;
+          octet = client_gateway_ip.substring(index,client_gateway_ip.indexOf(".",index)).toInt();
+          index = client_gateway_ip.indexOf(".",index)+1;
+          config_globals.client_gateway_ip[2] = octet;
+          octet = client_gateway_ip.substring(index).toInt();
+          config_globals.client_gateway_ip[3] = octet;
+        }
 
-            octet = client_local_ip.substring(index,client_local_ip.indexOf(".",index)).toInt();
-            index = client_local_ip.indexOf(".",index)+1;
-            config_globals.client_static_ip[2] = octet;
+        if(client_subnet_mask.length() && std::count(client_subnet_mask.begin(), client_subnet_mask.end(), '.') == 3  ){
+          index=0;
+          octet = client_subnet_mask.substring(index,client_subnet_mask.indexOf(".",index)).toInt();
+          index = client_subnet_mask.indexOf(".",index)+1;
+          config_globals.client_subnet_mask[0] = octet;
+          octet = client_subnet_mask.substring(index,client_subnet_mask.indexOf(".",index)).toInt();
+          index = client_subnet_mask.indexOf(".",index)+1;
+          config_globals.client_subnet_mask[1] = octet;
+          octet = client_subnet_mask.substring(index,client_subnet_mask.indexOf(".",index)).toInt();
+          index = client_subnet_mask.indexOf(".",index)+1;
+          config_globals.client_subnet_mask[2] = octet;
+          octet = client_subnet_mask.substring(index).toInt();
+          config_globals.client_subnet_mask[3] = octet;
+        }
 
-            octet = client_local_ip.substring(index).toInt();
-            config_globals.client_static_ip[3] = octet;
+        if(client_dns1_ip.length() && std::count(client_dns1_ip.begin(), client_dns1_ip.end(), '.') == 3  ){
+          index=0;
+          octet = client_dns1_ip.substring(index,client_dns1_ip.indexOf(".",index)).toInt();
+          index = client_dns1_ip.indexOf(".",index)+1;
+          config_globals.client_dns1_ip[0] = octet;
+          octet = client_dns1_ip.substring(index,client_dns1_ip.indexOf(".",index)).toInt();
+          index = client_dns1_ip.indexOf(".",index)+1;
+          config_globals.client_dns1_ip[1] = octet;
+          octet = client_dns1_ip.substring(index,client_dns1_ip.indexOf(".",index)).toInt();
+          index = client_dns1_ip.indexOf(".",index)+1;
+          config_globals.client_dns1_ip[2] = octet;
+          octet = client_dns1_ip.substring(index).toInt();
+          config_globals.client_dns1_ip[3] = octet;
+        }
+
+        if(client_dns2_ip.length() && std::count(client_dns2_ip.begin(), client_dns2_ip.end(), '.') == 3  ){
+          index=0;
+          octet = client_dns2_ip.substring(index,client_dns2_ip.indexOf(".",index)).toInt();
+          index = client_dns2_ip.indexOf(".",index)+1;
+          config_globals.client_dns2_ip[0] = octet;
+          octet = client_dns2_ip.substring(index,client_dns2_ip.indexOf(".",index)).toInt();
+          index = client_dns2_ip.indexOf(".",index)+1;
+          config_globals.client_dns2_ip[1] = octet;
+          octet = client_dns2_ip.substring(index,client_dns2_ip.indexOf(".",index)).toInt();
+          index = client_dns2_ip.indexOf(".",index)+1;
+          config_globals.client_dns2_ip[2] = octet;
+          octet = client_dns2_ip.substring(index).toInt();
+          config_globals.client_dns2_ip[3] = octet;
         }
 
         Serial.printf("\nCLIENT STATIC IP:  %d.%d.%d.%d",  config_globals.client_static_ip[0],
@@ -1304,13 +1385,13 @@ void handleChangeNetworkConfig(void){
 void handleChangeServerConfig(void){
   Serial.print("/change_server_config");
   String new_ip, new_port;
-  
-  if (server.hasArg("ip") && server.hasArg("port")){
-      new_ip = server.arg("new_ip");
-      new_port = server.arg("new_port");
+
+  if (server.hasArg("server_ip") && server.hasArg("server_port")){
+      new_ip = server.arg("server_ip");
+      new_port = server.arg("server_port");
       /* Validate ip and port number */
-      server.arg("ip").toCharArray(config_globals.server_ip, sizeof(config_globals.server_ip));
-      config_globals.server_port=server.arg("port").toInt();
+      server.arg("server_ip").toCharArray(config_globals.server_ip, sizeof(config_globals.server_ip));
+      config_globals.server_port=server.arg("server_port").toInt();
       server.arg("send_measurements_path").toCharArray(config_globals.send_measurements_path, sizeof(config_globals.send_measurements_path));
       server.arg("get_time_path").toCharArray(config_globals.get_time_path, sizeof(config_globals.get_time_path));
 
@@ -1448,15 +1529,39 @@ unsigned char handleGetParameters(void){
   //Send configuration parameters to the client.
 
   //Generates IP address with each octet.
-  String cl_ip =  String(config_globals.client_static_ip[0],DEC)+"."+
+  String cl_ip, cl_gateway_ip, cl_subnet_mask,cl_dns1_ip,cl_dns2_ip;
+
+  cl_ip =         String(config_globals.client_static_ip[0],DEC)+"."+
                   String(config_globals.client_static_ip[1],DEC)+"."+
                   String(config_globals.client_static_ip[2],DEC)+"."+
                   String(config_globals.client_static_ip[3],DEC);
+  cl_gateway_ip = String(config_globals.client_gateway_ip[0],DEC)+"."+
+                  String(config_globals.client_gateway_ip[1],DEC)+"."+
+                  String(config_globals.client_gateway_ip[2],DEC)+"."+
+                  String(config_globals.client_gateway_ip[3],DEC);
+  cl_subnet_mask =String(config_globals.client_subnet_mask[0],DEC)+"."+
+                  String(config_globals.client_subnet_mask[1],DEC)+"."+
+                  String(config_globals.client_subnet_mask[2],DEC)+"."+
+                  String(config_globals.client_subnet_mask[3],DEC);
+  cl_dns1_ip =    String(config_globals.client_dns1_ip[0],DEC)+"."+
+                  String(config_globals.client_dns1_ip[1],DEC)+"."+
+                  String(config_globals.client_dns1_ip[2],DEC)+"."+
+                  String(config_globals.client_dns1_ip[3],DEC);
+  cl_dns2_ip =    String(config_globals.client_dns2_ip[0],DEC)+"."+
+                  String(config_globals.client_dns2_ip[1],DEC)+"."+
+                  String(config_globals.client_dns2_ip[2],DEC)+"."+
+                  String(config_globals.client_dns2_ip[3],DEC);
 
   String parameters = "\"{";
   parameters += "\\\"network_ap_ssid\\\":\\\""+String(config_globals.network_ap_ssid)+"\\\"";
   parameters += ",\\\"network_ap_pass\\\":\\\""+String(config_globals.network_ap_pass)+"\\\"";
   parameters += ",\\\"client_static_ip\\\":\\\""+String(cl_ip)+"\\\"";
+
+  parameters += ",\\\"client_gateway_ip\\\":\\\""+String(cl_gateway_ip)+"\\\"";
+  parameters += ",\\\"client_subnet_mask\\\":\\\""+String(cl_subnet_mask)+"\\\"";
+  parameters += ",\\\"client_dns1_ip\\\":\\\""+String(cl_dns1_ip)+"\\\"";
+  parameters += ",\\\"client_dns2_ip\\\":\\\""+String(cl_dns2_ip)+"\\\"";
+
   parameters += ",\\\"server_ip\\\":\\\""+String(config_globals.server_ip)+"\\\"";
   parameters += ",\\\"server_port\\\":"+String(config_globals.server_port);
   parameters += ",\\\"send_measurements_path\\\":\\\""+String(config_globals.send_measurements_path)+"\\\"";

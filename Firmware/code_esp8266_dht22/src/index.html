@@ -60,14 +60,30 @@
         <br>
         <form method="POST" action="change_network_config">
 
+            <label>SSID</label>
+            <input id="input_network_ap_ssid" type="text" placeholder="SSID" name="network_ap_ssid" width="50%" border-radius="2px">
+            <br>
+            <label>Password</label>
+            <input id="input_network_ap_pass" type="password" placeholder="Password" name="network_ap_pass" width="50%">
+            <br>
+            <label>Local IP</label>
+            <input id="input_client_static_ip" type="text" placeholder="Local IP" name="client_static_ip" width="50%">
+            <br>
+            <label>Gateway</label>
+            <input id="input_client_gateway_ip" type="text" placeholder="Gateway IP" name="client_gateway_ip" width="50%">
+            <br>
+            <label>Subnet</label>
+            <input id="input_client_subnet_mask" type="text" placeholder="Subnet mask" name="client_subnet_mask" width="50%">
+            <br>
+            <label>DNS1</label>
+            <input id="input_client_dns1_ip" type="text" placeholder="DNS1 IP" name="client_dns1_ip" width="50%">
+            <br>
+            <label>DNS2</label>
+            <input id="input_client_dns2_ip" type="text" placeholder="DNS2 IP" name="client_dns2_ip" width="50%">
+            <br>
 
-            <input id="input_network_ap_ssid" type="text" placeholder="SSID" name="new_ssid" width="50%" border-radius="2px">
-            <br>
-            <input id="input_network_ap_pass" type="password" placeholder="Password" name="new_password" width="50%">
-            <br>
-            <input id="input_client_static_ip" type="text" placeholder="Static IP" name="client_static_ip" width="50%">
             <input class="button" type="submit" value="Modificar">
-            
+
         </form>
         
     </div>
@@ -77,11 +93,11 @@
         <br>
         <br>
         <form method="POST" action="change_server_config" margin="10px">
-            <label>IP Server</label>
-            <input id="input_server_ip" type="text" placeholder="IPv4" name="ip" width="50%" border-radius="2px">
+            <label>Host/IP</label>
+            <input id="input_server_ip" type="text" placeholder="IPv4" name="server_ip" width="50%" border-radius="2px">
             <br>
-            <label>Puerto server</label>
-            <input id="input_server_port" type="text" placeholder="Puerto" name="port" width="50%">
+            <label>Puerto</label>
+            <input id="input_server_port" type="text" placeholder="Puerto" name="server_port" width="50%">
             <br>
             <label>Ruta mediciones</label>
             <input id="input_send_measurements_path" type="text" placeholder="Ruta datos" name="send_measurements_path" width="50%">
@@ -149,8 +165,8 @@
         </div>
         <br>
         <div class="device_config">
-            <label>Hora conexi&oacute;n</label>
-            <input type="text" id="input_connection_time">
+            <label>Hora conexi&oacute;n (UTC)</label>
+            <input type="text" id="input_connection_time" placeholder="Hs">
         </div>
 
         <br>
@@ -179,6 +195,12 @@
                 document.querySelector("#input_network_ap_ssid").value = parameters["network_ap_ssid"];
                 document.querySelector("#input_network_ap_pass").value = parameters["network_ap_pass"];
                 document.querySelector("#input_client_static_ip").value = parameters["client_static_ip"];
+                
+                document.querySelector("#input_client_gateway_ip").value = parameters["client_gateway_ip"];
+                document.querySelector("#input_client_subnet_mask").value = parameters["client_subnet_mask"];
+                document.querySelector("#input_client_dns1_ip").value = parameters["client_dns1_ip"];
+                document.querySelector("#input_client_dns2_ip").value = parameters["client_dns2_ip"];
+
                 document.querySelector("#input_server_ip").value = parameters["server_ip"];
                 document.querySelector("#input_server_port").value = parameters["server_port"];
                 document.querySelector("#input_send_measurements_path").value = parameters["send_measurements_path"];
@@ -192,10 +214,9 @@
                 document.querySelector("#input_id_sensor_d").value = parameters["id_sensor_d"];
                 document.querySelector("#input_sample_time").value = parameters["sample_time"];
                 document.querySelector("#input_connection_time").value = parameters["connection_time"];
-               
+
                 // console.log("JSON parsed:",JSON.parse(this.responseText));
                
-                //responseText should be separated into all the different values. See how to
                 // handle JSON from ESP8266...
             }
         };
@@ -248,12 +269,15 @@
     }
 
     function turnOffDevice(){
-        if (confirm("¿Apagar dispositivo?")) {
-            console.log("Device will turn off...");
-            var xhttp = new XMLHttpRequest();
-            xhttp.open("POST", "device_turn_off", true);
-            xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-            xhttp.send("command=turn_off_confirm");
+        if (confirm("¿Apagar dispositivo?\nDesconecte el cable USB.")) {
+            if (!alert("Desconecte el cable USB.")) {            
+                console.log("Device will turn off...");
+                var xhttp = new XMLHttpRequest();
+                xhttp.open("POST", "device_turn_off", true);
+                xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+                xhttp.send("command=turn_off_confirm");
+            }
+            else console.log("Turn off cancelled.");  //Cancelled
         }
         else {
             console.log("Turn off cancelled.");  //Cancelled
@@ -263,22 +287,28 @@
     function deviceConfig() {
         
         //Update values to variable.
-        parameters["network_ap_ssid"] = document.querySelector("#input_network_ap_ssid").value
-        parameters["network_ap_pass"] = document.querySelector("#input_network_ap_pass").value
-        parameters["client_static_ip"] = document.querySelector("#input_client_static_ip").value
-        parameters["server_ip"] = document.querySelector("#input_server_ip").value
-        parameters["server_port"] = document.querySelector("#input_server_port").value
+        parameters["network_ap_ssid"] = document.querySelector("#input_network_ap_ssid").value;
+        parameters["network_ap_pass"] = document.querySelector("#input_network_ap_pass").value;
+
+        parameters["client_static_ip"] = document.querySelector("#input_client_static_ip").value;
+        parameters["client_gateway_ip"] = document.querySelector("#input_client_gateway_ip").value;
+        parameters["client_subnet_mask"] = document.querySelector("#input_client_subnet_mask").value;
+        parameters["client_dns1_ip"] = document.querySelector("#input_client_dns1_ip").value;
+        parameters["client_dns2_ip"] = document.querySelector("#input_client_dns2_ip").value;
+
+        parameters["server_ip"] = document.querySelector("#input_server_ip").value;
+        parameters["server_port"] = document.querySelector("#input_server_port").value;
         parameters["send_measurements_path"] = document.querySelector("#input_send_measurements_path").value;
         parameters["get_time_path"] = document.querySelector("#input_get_time_path").value;
-        parameters["network_connection_timeout"] = document.querySelector("#input_network_connection_timeout").value
-        parameters["server_connection_retry"] = document.querySelector("#input_server_connection_retry").value
-        parameters["id_transceiver"] = document.querySelector("#input_id_transceiver").value
-        parameters["id_sensor_a"] = document.querySelector("#input_id_sensor_a").value
-        parameters["id_sensor_b"] = document.querySelector("#input_id_sensor_b").value
-        parameters["id_sensor_c"] = document.querySelector("#input_id_sensor_c").value
-        parameters["id_sensor_d"] = document.querySelector("#input_id_sensor_d").value
-        parameters["sample_time"] = document.querySelector("#input_sample_time").value
-        parameters["connection_time"] = document.querySelector("#input_connection_time").value
+        parameters["network_connection_timeout"] = document.querySelector("#input_network_connection_timeout").value;
+        parameters["server_connection_retry"] = document.querySelector("#input_server_connection_retry").value;
+        parameters["id_transceiver"] = document.querySelector("#input_id_transceiver").value;
+        parameters["id_sensor_a"] = document.querySelector("#input_id_sensor_a").value;
+        parameters["id_sensor_b"] = document.querySelector("#input_id_sensor_b").value;
+        parameters["id_sensor_c"] = document.querySelector("#input_id_sensor_c").value;
+        parameters["id_sensor_d"] = document.querySelector("#input_id_sensor_d").value;
+        parameters["sample_time"] = document.querySelector("#input_sample_time").value;
+        parameters["connection_time"] = document.querySelector("#input_connection_time").value;
 
         
         var xhttp = new XMLHttpRequest();
@@ -288,6 +318,12 @@
             `network_ap_ssid=${parameters["network_ap_ssid"]}&`+
             `network_ap_pass=${parameters["network_ap_pass"]}&`+
             `client_static_ip=${parameters["client_static_ip"]}&`+
+            
+            `client_gateway_ip=${parameters["client_gateway_ip"]}&`+
+            `client_subnet_mask=${parameters["client_subnet_mask"]}&`+
+            `client_dns1_ip=${parameters["client_dns1_ip"]}&`+
+            `client_dns2_ip=${parameters["client_dns2_ip"]}&`+
+            
             `server_ip=${parameters["server_ip"]}&`+
             `server_port=${parameters["server_port"]}&`+
             `send_measurements_path=${parameters["send_measurements_path"]}&`+
