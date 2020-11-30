@@ -58,10 +58,7 @@ print('read data: '+read_data)
 #     print('ERROR. Time not updated.')
 
 
-
-
 ser.close()
 
-input()
 
 

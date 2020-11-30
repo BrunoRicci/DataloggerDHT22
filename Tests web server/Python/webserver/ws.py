@@ -115,7 +115,7 @@ def handleReceivedData(dict_data):
 def removeDuplicates(l):
     # Remove duplicates from a list.
     l = ["a", "b", "a", "c", "c"]
-    l = list( dict.fromkeys(mylist) )
+    l = list( dict.fromkeys(l) )
     return l
 
 """ BUG: when saving device status timestamp, "timestamp" attribute may be duplicated due to very fast packet sending from client (faster than 1 sec.)
@@ -204,8 +204,9 @@ def format_flash():
     return('FLASH formatted.')
 
 try:
-    #run(host='192.168.0.172', port=8080, reloader=True, debug=True)
-    run(host='192.168.1.101', port=8080, reloader=True, debug=True)
+    # run(host='192.168.0.172', port=8080, reloader=True, debug=True)
+    run(host='192.168.0.155', port=8080, reloader=True, debug=True)
+    # run(host='192.168.1.101', port=8080, reloader=True, debug=True)
 finally:    #when to finish program...
     actual_db.finishConn()  #closes database connection.
     print('Program finished.')

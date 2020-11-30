@@ -839,7 +839,7 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
     
     uint8_t buf[MAX_PACKET_PER_REQUEST*sizeof(Measurement)]; //288 bytes.
     //Generate full URL.
-    String url = "http://www."+(String)config_globals.server_ip+":"+(String)config_globals.server_port;
+    String url = "http://"+(String)config_globals.server_ip+":"+(String)config_globals.server_port;
     url+=SEND_MEASUREMENTS_PATH;
     Serial.print("\n url: ");   Serial.println(url);
 
