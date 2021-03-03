@@ -65,6 +65,27 @@
             <br>
             <label>Password</label>
             <input id="input_network_ap_pass" type="password" placeholder="Password" name="network_ap_pass" width="50%">
+            <br><br>
+            <select id="selector_network_connection_type">
+                <option value="WPA2">WPA2</option>
+                <option value="WPA2E">WPA2-Enterprise</option>
+            </select>
+            <br>
+            <div id="div_wpa2e_parameters" style="display: none; border:1px solid gray; border-radius:5px; margin: 10px;">
+                WPA2-Enterprise 
+                <input style="display: none;" id="input_network_connection_type" type="text" placeholder="" name="network_connection_type">
+                <br>
+                <label>Usuario</label>
+                <input id="input_network_wpa2_enterprise_user" type="text" placeholder="Usuario" name="network_wpa2_enterprise_user" width="50%">
+                <br>
+                <label>Identidad</label>
+                <input id="input_network_wpa2_enterprise_identity" type="text" placeholder="Identidad" name="network_wpa2_enterprise_identity" width="50%">
+                <br>
+                <label>Contrase&ntilde;a</label>
+                <input id="input_network_wpa2_enterprise_pass" type="password" placeholder="Contrase&ntilde;a" name="network_wpa2_enterprise_pass" width="50%">
+                <br>
+            </div>
+            
             <br>
             <label>Local IP</label>
             <input id="input_client_static_ip" type="text" placeholder="Local IP" name="client_static_ip" width="50%">
@@ -191,11 +212,15 @@
 
                 console.log("parameters:", parameters);
                 
-
                 document.querySelector("#input_network_ap_ssid").value = parameters["network_ap_ssid"];
                 document.querySelector("#input_network_ap_pass").value = parameters["network_ap_pass"];
-                document.querySelector("#input_client_static_ip").value = parameters["client_static_ip"];
                 
+                document.querySelector("#input_network_connection_type").value = parameters["network_connection_type"];
+                document.querySelector("#input_network_wpa2_enterprise_user").value = parameters["network_wpa2_enterprise_user"];
+                document.querySelector("#input_network_wpa2_enterprise_identity").value = parameters["network_wpa2_enterprise_identity"];
+                document.querySelector("#input_network_wpa2_enterprise_pass").value = parameters["network_wpa2_enterprise_pass"];
+                
+                document.querySelector("#input_client_static_ip").value = parameters["client_static_ip"];
                 document.querySelector("#input_client_gateway_ip").value = parameters["client_gateway_ip"];
                 document.querySelector("#input_client_subnet_mask").value = parameters["client_subnet_mask"];
                 document.querySelector("#input_client_dns1_ip").value = parameters["client_dns1_ip"];
@@ -228,6 +253,19 @@
 
     });
 
+    document.querySelector("#selector_network_connection_type").addEventListener('click', function(){
+
+        // console.log('Auth type clicked:', this.options[this.options.selectedIndex].value);
+
+        if(this.options[this.options.selectedIndex].value == 'WPA2E'){
+            document.querySelector("#div_wpa2e_parameters").style.display='block';
+        }else{
+            document.querySelector("#div_wpa2e_parameters").style.display='none';
+        }
+        document.querySelector("#input_network_connection_type").value=this.value;
+
+
+    });
 
     function formatRam(){
         if (confirm("¿Confirma que desea formatear la RAM?")) {
@@ -290,6 +328,11 @@
         parameters["network_ap_ssid"] = document.querySelector("#input_network_ap_ssid").value;
         parameters["network_ap_pass"] = document.querySelector("#input_network_ap_pass").value;
 
+        parameters["network_connection_type"] = document.querySelector("#input_network_connection_type").value;
+        parameters["network_wpa2_enterprise_user"] = document.querySelector("#input_network_wpa2_enterprise_user").value;
+        parameters["network_wpa2_enterprise_identity"] = document.querySelector("#input_network_wpa2_enterprise_identity").value;
+        parameters["network_wpa2_enterprise_pass"] = document.querySelector("#input_network_wpa2_enterprise_pass").value;
+
         parameters["client_static_ip"] = document.querySelector("#input_client_static_ip").value;
         parameters["client_gateway_ip"] = document.querySelector("#input_client_gateway_ip").value;
         parameters["client_subnet_mask"] = document.querySelector("#input_client_subnet_mask").value;
@@ -317,8 +360,13 @@
         xhttp.send(
             `network_ap_ssid=${parameters["network_ap_ssid"]}&`+
             `network_ap_pass=${parameters["network_ap_pass"]}&`+
-            `client_static_ip=${parameters["client_static_ip"]}&`+
             
+            `network_connection_type=${parameters["network_connection_type"]}&`+
+            `network_wpa2_enterprise_user=${parameters["network_wpa2_enterprise_user"]}&`+
+            `network_wpa2_enterprise_identity=${parameters["network_wpa2_enterprise_identity"]}&`+
+            `network_wpa2_enterprise_pass=${parameters["network_wpa2_enterprise_pass"]}&`+
+
+            `client_static_ip=${parameters["client_static_ip"]}&`+
             `client_gateway_ip=${parameters["client_gateway_ip"]}&`+
             `client_subnet_mask=${parameters["client_subnet_mask"]}&`+
             `client_dns1_ip=${parameters["client_dns1_ip"]}&`+

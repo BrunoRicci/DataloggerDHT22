@@ -17,6 +17,8 @@
 #include <rtc_memory.hpp>
 #include <statemachine.hpp>
 
+#include "wpa2_enterprise.h"
+
 
 //----------------------------------------------------------------------------------------
 DHT dht22_sensor_1(DHT_SENSOR_1_PIN, DHTTYPE);    //Creates DHT22 sensor "sensor" object
@@ -30,14 +32,21 @@ typedef struct{
   uint16_t id_transceiver;  //Placed first to avoid value corruption when struct is modified.
 
   char network_ap_ssid[31];
-  char network_ap_pass[31];   
+  char network_ap_pass[31];
+
+  char network_wpa2_enterprise_user[31];
+  char network_wpa2_enterprise_identity[31];   
+  char network_wpa2_enterprise_pass[31];
+  uint8_t network_connection_type;   
+  enum network_security_type{WEP, WPA, WPA2, WPA2E};
+
   char server_ip[64];
   uint16_t server_port;
   char local_ip[16];      //192.168.255.255 ->15 + NULL
   char send_measurements_path[64];
   char get_time_path[64];
 
-  char wifi_security_type[10];   //// enum wifi_security_type{WEP, WPA, WPA2, WPA2E};
+  // char wifi_security_type[10];   //// enum wifi_security_type{WEP, WPA, WPA2, WPA2E};
   
   char client_static_ip[4];       //255.255.255.255 
   char client_gateway_ip[4];
@@ -67,7 +76,7 @@ typedef struct{
   uint32_t  timestamp;
   uint8_t   battery_level;
   uint8_t   event_type;
-  enum EventTypes {POWER_FAIL, FORCE_TURN_OFF, FORCE_MEASUREMENT, CONFIG_MODE} ;
+  enum EventTypes {POWER_FAIL, FORCE_TURN_OFF, FORCE_MEASUREMENT, CONFIG_MODE};
 }Logs;
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -820,7 +829,25 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
     Serial.println(WiFi.localIP());
   }
 
-  WiFi.begin(config_globals.network_ap_ssid, config_globals.network_ap_pass);
+  if(config_globals.network_connection_type == Config_globals::network_security_type::WPA2E){
+     // Clean up to be sure no old data is still inside
+    wifi_station_clear_cert_key();
+    wifi_station_clear_enterprise_ca_cert();
+    wifi_station_clear_enterprise_identity();
+    wifi_station_clear_enterprise_username();
+    wifi_station_clear_enterprise_password();
+    wifi_station_clear_enterprise_new_password();
+
+    wifi_station_set_enterprise_identity((uint8*)config_globals.network_wpa2_enterprise_identity, strlen(config_globals.network_wpa2_enterprise_identity));
+    wifi_station_set_enterprise_username((uint8*)config_globals.network_wpa2_enterprise_user, strlen(config_globals.network_wpa2_enterprise_user));
+    wifi_station_set_enterprise_password((uint8*)config_globals.network_wpa2_enterprise_pass, strlen(config_globals.network_wpa2_enterprise_pass));
+  }
+  else{
+    WiFi.begin(config_globals.network_ap_ssid, config_globals.network_ap_pass);
+  }
+
+
+
   LED_Color(COLOR_BLUE);
       
   Serial.print("\nConnecting to network...");
@@ -1159,9 +1186,14 @@ Config_globals readGlobals(void){
   else{     //Load default values.
     strcpy(config_globals.network_ap_ssid,"DATALOGGER SERVER");
     strcpy(config_globals.network_ap_pass,"!UBA12345!");
+    
+    config_globals.network_connection_type = Config_globals::network_security_type::WPA2;
+    strcpy(config_globals.network_wpa2_enterprise_identity,"");
+    strcpy(config_globals.network_wpa2_enterprise_user,"");
+    strcpy(config_globals.network_wpa2_enterprise_pass,"");
+    
     strcpy(config_globals.server_ip, "192.168.123.123");
     strcpy(config_globals.local_ip,"192.168.123.2");
-    strcpy(config_globals.wifi_security_type,"WPA2");
     strcpy(config_globals.send_measurements_path, SEND_MEASUREMENTS_PATH);
     strcpy(config_globals.get_time_path, GET_TIME_PATH);
 
@@ -1275,6 +1307,33 @@ void handleChangeNetworkConfig(void){
         // new_password = server.arg("new_password");
         server.arg("network_ap_ssid").toCharArray(config_globals.network_ap_ssid, sizeof(config_globals.network_ap_ssid));
         server.arg("network_ap_pass").toCharArray(config_globals.network_ap_pass, sizeof(config_globals.network_ap_pass));
+        
+        /*
+          char network_wpa2_enterprise_user[31];
+          char network_wpa2_enterprise_identity[31];   
+          char network_wpa2_enterprise_pass[31];
+          uint8_t network_connection_type;   
+        */
+        server.arg("network_wpa2_enterprise_user").toCharArray(config_globals.network_wpa2_enterprise_user, sizeof(config_globals.network_wpa2_enterprise_user));
+        server.arg("network_wpa2_enterprise_identity").toCharArray(config_globals.network_wpa2_enterprise_identity, sizeof(config_globals.network_wpa2_enterprise_identity));
+        server.arg("network_wpa2_enterprise_pass").toCharArray(config_globals.network_wpa2_enterprise_pass, sizeof(config_globals.network_wpa2_enterprise_pass));
+        
+        //Network security type:
+        if(server.arg("network_connection_type") == "WEP"){  //WEP
+          config_globals.network_connection_type = Config_globals::network_security_type::WEP;
+        }
+        else if(server.arg("network_connection_type") == "WPA"){  //WPA
+          config_globals.network_connection_type = Config_globals::network_security_type::WPA;
+        }
+        else if(server.arg("network_connection_type") == "WPA2"){  //WPA2
+          config_globals.network_connection_type = Config_globals::network_security_type::WPA2;
+        }
+        else if(server.arg("network_connection_type") == "WPA2E"){    //WPA2-enterprise
+          config_globals.network_connection_type = Config_globals::network_security_type::WPA2E;
+        }
+        else
+          config_globals.network_connection_type = Config_globals::network_security_type::WPA2; //default value
+
         client_local_ip = server.arg("client_static_ip");
         client_gateway_ip = server.arg("client_gateway_ip");
         client_subnet_mask = server.arg("client_subnet_mask");
@@ -1555,8 +1614,13 @@ unsigned char handleGetParameters(void){
   String parameters = "\"{";
   parameters += "\\\"network_ap_ssid\\\":\\\""+String(config_globals.network_ap_ssid)+"\\\"";
   parameters += ",\\\"network_ap_pass\\\":\\\""+String(config_globals.network_ap_pass)+"\\\"";
-  parameters += ",\\\"client_static_ip\\\":\\\""+String(cl_ip)+"\\\"";
 
+  parameters += ",\\\"network_connection_type\\\":\\\""+String(config_globals.network_connection_type)+"\\\"";
+  parameters += ",\\\"network_wpa2_enterprise_user\\\":\\\""+String(config_globals.network_wpa2_enterprise_user)+"\\\"";
+  parameters += ",\\\"network_wpa2_enterprise_identity\\\":\\\""+String(config_globals.network_wpa2_enterprise_identity)+"\\\"";
+  parameters += ",\\\"network_wpa2_enterprise_pass\\\":\\\""+String(config_globals.network_wpa2_enterprise_pass)+"\\\"";      
+
+  parameters += ",\\\"client_static_ip\\\":\\\""+String(cl_ip)+"\\\"";
   parameters += ",\\\"client_gateway_ip\\\":\\\""+String(cl_gateway_ip)+"\\\"";
   parameters += ",\\\"client_subnet_mask\\\":\\\""+String(cl_subnet_mask)+"\\\"";
   parameters += ",\\\"client_dns1_ip\\\":\\\""+String(cl_dns1_ip)+"\\\"";

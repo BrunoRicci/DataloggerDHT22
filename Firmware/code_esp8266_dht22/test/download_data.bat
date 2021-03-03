@@ -6,7 +6,7 @@ echo device_id=%INPUT%
 
 esptool.py erase_flash
 echo ----- FLASH ERASED -----
-esptool.py -b1000000 write_flash 0 "C:\Users\BRUNO - PC\REPOS_GIT\DataloggerDHT22\Firmware\code_esp8266_dht22\test\devices_flash_memories\flash_d%INPUT%_27-11-2020.bin"
+esptool.py -b1000000 write_flash 0 "C:\Users\BRUNO - PC\REPOS_GIT\DataloggerDHT22\Firmware\code_esp8266_dht22\test\devices_flash_memories\flash_d%INPUT%_17-02-2021.bin"
 echo ----- FLASH WRITTEN-----
 esptool.py -b1000000 write_flash 0 "C:\Users\BRUNO - PC\REPOS_GIT\DataloggerDHT22\Firmware\code_esp8266_dht22\.pio\build\nodemcuv2\firmware.bin"
 echo ----- FIRMWARE UPDATED -----

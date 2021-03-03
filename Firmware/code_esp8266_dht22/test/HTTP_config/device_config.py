@@ -7,6 +7,10 @@ devices_data={
     "1":{
         "network_ap_ssid":"Fibertel WiFi866 2.4GHz",
         "network_ap_pass":"01416592736",
+        "network_connection_type":"WPA2",
+        "network_wpa2_enterprise_user":"",
+        "network_wpa2_enterprise_identity":"",
+        "network_wpa2_enterprise_pass":"",
         "client_static_ip":"0.0.0.0",
         "client_gateway_ip":"0.0.0.0",
         "client_subnet_mask":"255.255.0.0",
@@ -29,6 +33,10 @@ devices_data={
     "2":{
         "network_ap_ssid":"Fibertel WiFi866 2.4GHz",
         "network_ap_pass":"01416592736",
+        "network_connection_type":"WPA2",
+        "network_wpa2_enterprise_user":"",
+        "network_wpa2_enterprise_identity":"",
+        "network_wpa2_enterprise_pass":"",
         "client_static_ip":"0.0.0.0",
         "client_gateway_ip":"0.0.0.0",
         "client_subnet_mask":"255.255.0.0",
@@ -51,6 +59,10 @@ devices_data={
     "3":{
         "network_ap_ssid":"Fibertel WiFi866 2.4GHz",
         "network_ap_pass":"01416592736",
+        "network_connection_type":"WPA2",
+        "network_wpa2_enterprise_user":"",
+        "network_wpa2_enterprise_identity":"",
+        "network_wpa2_enterprise_pass":"",
         "client_static_ip":"0.0.0.0",
         "client_gateway_ip":"0.0.0.0",
         "client_subnet_mask":"255.255.0.0",
@@ -73,6 +85,10 @@ devices_data={
     "4":{
         "network_ap_ssid":"Fibertel WiFi866 2.4GHz",
         "network_ap_pass":"01416592736",
+        "network_connection_type":"WPA2",
+        "network_wpa2_enterprise_user":"",
+        "network_wpa2_enterprise_identity":"",
+        "network_wpa2_enterprise_pass":"",
         "client_static_ip":"0.0.0.0",
         "client_gateway_ip":"0.0.0.0",
         "client_subnet_mask":"255.255.0.0",
@@ -95,6 +111,10 @@ devices_data={
     "5":{
         "network_ap_ssid":"Fibertel WiFi866 2.4GHz",
         "network_ap_pass":"01416592736",
+        "network_connection_type":"WPA2",
+        "network_wpa2_enterprise_user":"",
+        "network_wpa2_enterprise_identity":"",
+        "network_wpa2_enterprise_pass":"",        
         "client_static_ip":"0.0.0.0",
         "client_gateway_ip":"0.0.0.0",
         "client_subnet_mask":"255.255.0.0",
@@ -117,13 +137,17 @@ devices_data={
     "6":{
         "network_ap_ssid":"Fibertel WiFi866 2.4GHz",
         "network_ap_pass":"01416592736",
+        "network_connection_type":"WPA2",
+        "network_wpa2_enterprise_user":"",
+        "network_wpa2_enterprise_identity":"",
+        "network_wpa2_enterprise_pass":"",
         "client_static_ip":"192.168.0.206",
         "client_gateway_ip":"192.168.0.1",
         "client_subnet_mask":"255.255.255.0",
         "client_dns1_ip":"200.49.130.47",
         "client_dns2_ip":"200.42.4.204",
-        "server_ip":"192.168.0.155",
-        "server_port":8080,
+        "server_ip":"ifeva.edu.ar",
+        "server_port":80,
         "send_measurements_path":"/sensores/test.php",
         "get_time_path":"/sensores/gettime.php",
         "network_connection_timeout":15000,
@@ -139,6 +163,10 @@ devices_data={
     "10":{
         "network_ap_ssid":"Fibertel WiFi866 2.4GHz",
         "network_ap_pass":"01416592736",
+        "network_connection_type":"WPA2",
+        "network_wpa2_enterprise_user":"",
+        "network_wpa2_enterprise_identity":"",
+        "network_wpa2_enterprise_pass":"",        
         "client_static_ip":"192.168.0.206",
         "client_gateway_ip":"192.168.0.1",
         "client_subnet_mask":"255.255.255.0",
@@ -161,14 +189,17 @@ devices_data={
 }
 
 r = requests.request('post','http://192.168.0.170:8080/get_parameters', headers={'Accept':'text'}).json()
-device_id = str(json.loads(r)['id_transceiver'])
+try:
+    device_id = str(json.loads(r)['id_transceiver'])
+except:
+    device_id='6'   #FORCE DEVICE ID    
+    print("Device response with errors. Sending forced value (id_transceiver:{})".format(device_id))
+    pass
 print('device id:'+device_id)
 
 ########################################################################
-device_id='6'   #FORCE DEVICE ID
+
 flag_reset_sent_pointer = False
-
-
 if(len(sys.argv) > 1):  # if device id specified...
     device_id = int(sys.argv[1])
 
