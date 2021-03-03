@@ -787,6 +787,10 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
   uint16_t sent_packets_amount = 0;
   // bool network_connection_timeout=false, request_timeout=false;
 
+  struct station_config wifi_config;
+
+
+  
   wifiTurnOn(); //Turn on wifi.
 
 
@@ -831,6 +835,13 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
 
   if(config_globals.network_connection_type == Config_globals::network_security_type::WPA2E){
      // Clean up to be sure no old data is still inside
+    memset(&wifi_config, 0, sizeof(wifi_config));
+    strcpy((char*)wifi_config.ssid, config_globals.network_ap_ssid);
+    strcpy((char*)wifi_config.password, config_globals.network_wpa2_enterprise_pass);
+    wifi_station_set_config(&wifi_config);
+    
+    wifi_station_set_wpa2_enterprise_auth(1);
+    Serial.print("\nWPA2 enterprise enabled...");
     wifi_station_clear_cert_key();
     wifi_station_clear_enterprise_ca_cert();
     wifi_station_clear_enterprise_identity();
@@ -841,6 +852,7 @@ uint16_t sendMeasurements(uint16_t start_packet, uint16_t packets){
     wifi_station_set_enterprise_identity((uint8*)config_globals.network_wpa2_enterprise_identity, strlen(config_globals.network_wpa2_enterprise_identity));
     wifi_station_set_enterprise_username((uint8*)config_globals.network_wpa2_enterprise_user, strlen(config_globals.network_wpa2_enterprise_user));
     wifi_station_set_enterprise_password((uint8*)config_globals.network_wpa2_enterprise_pass, strlen(config_globals.network_wpa2_enterprise_pass));
+    wifi_station_connect();
   }
   else{
     WiFi.begin(config_globals.network_ap_ssid, config_globals.network_ap_pass);
